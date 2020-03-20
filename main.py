@@ -1,14 +1,37 @@
 import enum
 import sage.all
 #TODO from cost_functions import get_cost_dict
+from detail import get_output_size_calculators, get_cost_dict, MatrixSize
 from sage.combinat.designs.incidence_structures import IncidenceStructure as IS
 from sage.graphs.digraph import DiGraph
 
-class MatrixSize(enum.Enum):
-    small_small = 1
-    small_large = 2
-    large_small = 3
-    large_large = 4
+class Vertex:
+    """
+    Even distribution across all available localities is encoded by an
+    empty list
+    """
+    def __init__(self, var_name, size, tiling_type, loc_list):
+        self.var_name = var_name
+        self.size = size
+        self.tiling_type = tiling_type
+        self.loc_list = loc_list
+
+class Locality:
+    """
+    Class for tracking a locality and its memory budget, and other data
+    """
+    def __init__(self, memory_budget, idx):
+        self.idx = idx
+        self.memory_budget = memory_budget
+
+    def __lt__(self, other):
+        return self.memory_budget < other.memory_budget
+
+    def __le__(self, other):
+        return self.memory_budget <= other.memory_budget
+
+    def __eq__(self, other):
+        return self.memory_budget == other.memory_budget
 
 class Problem:
     """
@@ -43,7 +66,9 @@ class Problem:
     beginning distributed matrix is spread across
 
     """
-    def __init__(self, edge_set, vertex_sizes, num_locs, initial_distribution=None):
+    def __init__(self, edge_set, vertex_sizes, num_locs, 
+                       memory_budget=None, initial_distribution=None):
+        self.num_locs = num_locs
         if(initial_distribution is None):
             self.even_dist = True
         else:
@@ -79,7 +104,8 @@ class Problem:
         self.partial_order = DiGraph(partial_order).reverse()
         vertex_set = self.hypergraph.ground_set()
         
-        self.output_size_calculators = {2:{'add':self.add_output_size, 'mul':self.mul_output_size}}
+        self.output_size_calculators = get_output_size_calculators()
+        self.cost_dict = get_cost_dict()
         self.vertices = {}
         self.init_vertices(vertex_set)
 
@@ -90,7 +116,8 @@ class Problem:
         for level_set in self.partial_order.level_sets()[1:]:
             for edge in level_set:
                 op, vars_, expr = self.edge_set[edge]
-                output_size_func = self.output_size_calculators[len(vars_[1:])][op]
+                output_size_func = self.output_size_calculators[
+                    len(vars_[1:])][op]
                 operands = []
                 for k in vars_[1:]:
                     if k in self.vertex_sizes[0]:
@@ -117,47 +144,24 @@ class Problem:
                     self.vertex_sizes[2].append(vars_[0])
                 elif out_size[0] == MatrixSize.small_small:
                     self.vertex_sizes[3].append(vars_[0])
+        for v in vertex_set:
+            if k in self.vertex_sizes[0]:
+                size = MatrixSize.large_large
+            elif k in self.vertex_sizes[1]:
+                size = MatrixSize.large_small
+            elif k in self.vertex_sizes[2]:
+                size = MatrixSize.small_large
+            elif k in self.vertex_sizes[3]:
+                size = MatrixSize.small_small
+            else:
+                raise ValueError('Error retrieving matrix size')
+            if self.even_dist:
+                self.vertices[v] = Vertex(v, size, 'row', [])
+            else:
+                self.vertices[v] = Vertex(v, size, 'row', [-1])  
+
+
                 
-
-
-    def add_output_size(self, operands):
-        lhs = operands[0]
-        rhs = operands[1]
-        assert lhs[0] == rhs[0], "Add operation should have equal size"
-        assert lhs[1] == rhs[1], "Add operation should have aligned tiles"
-        return lhs
-
-
-    def mul_output_size(self, operands):
-        assert len(operands), 'Matrix multiplication takes two arguments'
-        lhs_size = operands[0][0]
-        rhs_size = operands[1][0]
-        out_size = None
-        if lhs_size == MatrixSize.large_large:
-            if rhs_size == MatrixSize.large_large:
-                out_size = MatrixSize.large_large
-            elif rhs_size == MatrixSize.large_small:
-                out_size = MatrixSize.large_small
-        elif lhs_size == MatrixSize.large_small:
-            if rhs_size == MatrixSize.small_large:
-                out_size = MatrixSize.large_large
-            elif rhs_size == MatrixSize.small_small:
-                out_size = MatrixSize.large_small
-        elif lhs_size == MatrixSize.small_large:
-            if rhs_size == MatrixSize.large_large:
-                out_size = MatrixSize.small_large
-            elif rhs_size == MatrixSize.large_small:
-                out_size = MatrixSize.small_small
-        elif lhs_size == MatrixSize.small_small:
-            if rhs_size == MatrixSize.small_large:
-                out_size = MatrixSize.small_large
-            elif rhs_size == MatrixSize.small_small:
-                out_size = MatrixSize.small_small
-        if out_size is None:
-            raise ValueError('Matrix size mismatch {0}, {1}'.format(lhs_size, rhs_size))
-        else:
-            # Copy tiling from LHS
-            return (out_size, operands[0][1])    
 
 def test():
     edge_set = {'add_0':('add', ['f','a','b'], 'row'),
