@@ -49,8 +49,35 @@ def mul_output_size(operands):
         return out_size, operands[0][1]
 
 
+def inv_output_size(operands):
+    assert len(operands) == 1, 'Matrix inverse takes one argument'
+    arg_size = operands[0][0]
+    if arg_size == MatrixSize.large_small or arg_size == MatrixSize.small_large:
+        raise ValueError("Inverse can only be performed on square matrices")
+    else:
+        # Copy tiling from original
+        return operands[0]
+
+
+def transpose_output_size(operands):
+    assert len(operands) == 1, 'Matrix transposition takes one arguments'
+    arg_size = operands[0][0]
+    out_size = None
+    if arg_size == MatrixSize.large_large:
+        out_size = MatrixSize.large_large
+    elif arg_size == MatrixSize.large_small:
+        out_size = MatrixSize.small_large
+    elif arg_size == MatrixSize.small_large:
+        out_size = MatrixSize.large_small
+    elif arg_size == MatrixSize.small_small:
+        out_size = MatrixSize.small_small
+    # Copy tiling from LHS
+    return out_size, operands[0][1]
+
+
 def get_output_size_calculators():
-    return {2: {'add': add_output_size, 'mul': mul_output_size}}
+    return {1: {'inv': inv_output_size, 'transpose': transpose_output_size},
+            2: {'add': add_output_size, 'mul': mul_output_size}}
 
 
 def add_map_cost(operands):

@@ -46,16 +46,16 @@ class Vertex:
 
     - tiling_type -- TilingType (row-major, column-major, or block)
 
-    - loc_list -- List of localities this Vertex is distributed across
+    - dist -- List of localities this Vertex is distributed across
     In the case where data is not distributed across a proper subset of
     available localities, (that is, when all available localities are used
     in distributing this data structure) loc_list is simply empty
     """
-    def __init__(self, var_name, size, tiling_type, loc_list):
+    def __init__(self, var_name, size, tiling_type, dist):
         self.var_name = var_name
         self.size = size
         self.tiling_type = tiling_type
-        self.loc_list = loc_list
+        self.dist = dist
 
 class Locality:
     """
@@ -110,20 +110,14 @@ class Problem:
     def __init__(self, edge_set, vertex_sizes, num_locs, initial_distribution=None):
         if(initial_distribution is None):
             self.even_dist = True
-            self.locality_distribution = {}
         else:
             self.even_dist = False
-            self.locality_distribution = initial_distribution
 
         assert len(edge_set.values()) > 0
         for k in edge_set.values():
             assert len(list(k)) == 3, "Input data formatted incorrectly"
 
         self.num_locs = num_locs
-        self.vertex_sizes = {MatrixSize.small_small: vertex_sizes[0],
-                             MatrixSize.small_large: vertex_sizes[1],
-                             MatrixSize.large_small: vertex_sizes[2],
-                             MatrixSize.large_large: vertex_sizes[3]}
         self.edges = {edge_name: Edge(edge_name, op_name, k[0], k[1:], expression)
                       for edge_name, (op_name, k, expression) in edge_set.items()}
 
@@ -133,10 +127,10 @@ class Problem:
         # Make sure the big vertex list only includes vertices in the
         # edge set
         self.ground_set = {n for n, d in self.hypergraph.nodes(data=True) if d['bipartite'] == 1}
-        assert self.ground_set == (self.ground_set | set(self.vertex_sizes[MatrixSize.small_small] +
-                                                         self.vertex_sizes[MatrixSize.small_large] +
-                                                         self.vertex_sizes[MatrixSize.large_small] +
-                                                         self.vertex_sizes[MatrixSize.large_large]))
+        assert self.ground_set == (self.ground_set | set(vertex_sizes[0] +
+                                                         vertex_sizes[1] +
+                                                         vertex_sizes[2] +
+                                                         vertex_sizes[3]))
         self.edge_set = edge_set
         output_var_to_edge_name = {p.output: p.edge_name for p in self.edges.values()}
         is_prereq_to = {p.edge_name: set([]) for p in self.edges.values()}
@@ -154,9 +148,16 @@ class Problem:
         self.output_size_calculators = get_output_size_calculators()
         self.cost_dict = get_cost_dict()
         self.vertices = {}
-        self.init_vertices()
+        self.init_vertices(vertex_sizes, initial_distribution)
 
-    def init_vertices(self):
+    def init_vertices(self, vertex_sizes, initial_locality_distribution):
+        for i in range(len(vertex_sizes)):
+            for var in vertex_sizes[i]:
+                if not self.even_dist and var in initial_locality_distribution.keys():
+                    dist = initial_locality_distribution[var]
+                else:
+                    dist = []
+                self.vertices[var] = Vertex(var, MatrixSize(i+1), 'row', dist)
         # The first level set is the artificial '_begin_' node
         for level_set in self.get_level_sets()[1:]:
             for edge_name in level_set:
@@ -164,15 +165,7 @@ class Problem:
                 output_size_func = self.get_output_size_calculator(edge)
                 operands = [self.get_size_and_distribution(k) for k in edge.inputs]
                 out_size, out_dist = output_size_func(operands)
-                self.set_size_and_distribution(out_size, out_dist, edge.output)
-
-        for v in self.ground_set:
-            size = self.get_size_and_distribution(v)
-            if self.even_dist:
-                # Tiling is a decision variable, so it can be initialized arbitrarily
-                self.vertices[v] = Vertex(v, size, 'row', [])
-            else:
-                self.vertices[v] = Vertex(v, size, 'row', [-1])
+                self.vertices[edge.output] = Vertex(edge.output, out_size, 'row', out_dist)
 
     def init_hypergraph(self):
         bipartite_edge_set = []
@@ -191,6 +184,15 @@ class Problem:
         self.hypergraph.add_nodes_from(var_names, bipartite=1)
         self.hypergraph.add_edges_from(bipartite_edge_set)
 
+    def __call__(self, *args, **kwargs):
+        return self.cost()
+
+    def cost(self):
+
+
+        # Placeholder non-static
+        return len(self.vertex_sizes)
+
     def get_output_size_calculator(self, edge):
         return self.output_size_calculators[edge.get_arity()][edge.op_name]
 
@@ -208,37 +210,12 @@ class Problem:
                     in_degrees[j] -= 1
         return sets
 
-    def get_size_and_distribution(self, k):
-        if not self.even_dist and k in self.locality_distribution.keys():
-            dist = self.locality_distribution[k]
-        else:
-            dist = None
-        if k in self.vertex_sizes[MatrixSize.small_small]:
-            size = MatrixSize.small_small
-        elif k in self.vertex_sizes[MatrixSize.small_large]:
-            size = MatrixSize.small_large
-        elif k in self.vertex_sizes[MatrixSize.large_small]:
-            size = MatrixSize.large_small
-        elif k in self.vertex_sizes[MatrixSize.large_large]:
-            size = MatrixSize.large_large
-        else:
-            raise ValueError('Error retrieving matrix size')
-        return size, dist
+    def get_size_and_distribution(self, var_name):
+        var = self.vertices[var_name]
+        return var.size, var.dist
 
-    def set_size_and_distribution(self, size, distribution, var_name):
-        if distribution is not None and not self.even_dist:
-            self.locality_distribution[var_name] = distribution
-
-        if size == MatrixSize.small_small and var_name not in self.vertex_sizes[MatrixSize.small_small]:
-            self.vertex_sizes[MatrixSize.small_small] += var_name
-        elif size == MatrixSize.small_large and var_name not in self.vertex_sizes[MatrixSize.small_large]:
-            self.vertex_sizes[MatrixSize.small_large] += var_name
-        elif size == MatrixSize.large_small and var_name not in self.vertex_sizes[MatrixSize.large_small]:
-            self.vertex_sizes[MatrixSize.large_small] += var_name
-        elif size == MatrixSize.large_large and var_name not in self.vertex_sizes[MatrixSize.large_large]:
-            self.vertex_sizes[MatrixSize.large_large] += var_name
-        else:
-            raise ValueError('Attempt to reset variable size and/or distribution')
+    def get_distribution(self, var_name):
+        return self.vertices[var_name].dist
 
 
 def test():
