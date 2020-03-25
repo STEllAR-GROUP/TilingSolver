@@ -1,6 +1,7 @@
 import networkx as nx
 #TODO from cost_functions import get_cost_dict
-from detail import get_output_size_calculators, get_cost_dict, MatrixSize
+import detail
+from detail import MatrixSize
 from networkx.algorithms import bipartite
 from networkx import DiGraph
 
@@ -107,7 +108,8 @@ class Problem:
     - (Optional) initial_distribution -- Dictionary for sets of localities each
     beginning distributed matrix is spread across
     """
-    def __init__(self, edge_set, vertex_sizes, num_locs, initial_distribution=None):
+    def __init__(self, edge_set, vertex_sizes, num_locs,
+                 initial_distribution=None):
         if(initial_distribution is None):
             self.even_dist = True
         else:
@@ -118,42 +120,54 @@ class Problem:
             assert len(list(k)) == 3, "Input data formatted incorrectly"
 
         self.num_locs = num_locs
-        self.edges = {edge_name: Edge(edge_name, op_name, k[0], k[1:], expression)
-                      for edge_name, (op_name, k, expression) in edge_set.items()}
+        self.edges = {edge_name:
+                      Edge(edge_name, op_name, k[0], k[1:], expression)
+                      for edge_name, (op_name, k, expression)
+                      in edge_set.items()}
 
         self.hypergraph = nx.Graph()
         self.init_hypergraph()
 
         # Make sure the big vertex list only includes vertices in the
         # edge set
-        self.ground_set = {n for n, d in self.hypergraph.nodes(data=True) if d['bipartite'] == 1}
+        self.ground_set = {n for n, d in self.hypergraph.nodes(data=True)
+                           if d['bipartite'] == 1}
         assert self.ground_set == (self.ground_set | set(vertex_sizes[0] +
                                                          vertex_sizes[1] +
                                                          vertex_sizes[2] +
                                                          vertex_sizes[3]))
-        self.edge_set = edge_set
-        output_var_to_edge_name = {p.output: p.edge_name for p in self.edges.values()}
-        is_prereq_to = {p.edge_name: set([]) for p in self.edges.values()}
+        this_var_is_output_in_this_edge_name = {p.output: p.edge_name
+                                                for p in self.edges.values()}
+        depends_on = {p.edge_name: set([]) for p in self.edges.values()}
         for p in self.edges.values():
             for i in p.inputs:
                 try:
-                    # I think this only triggers when something is in a "+=" type scenario
-                    # But we don't allow that
-                    if output_var_to_edge_name[i] == p.edge_name:
+                    # This 'if' is checking if one of our inputs is the output
+                    # to this expression, i.e., it's in a '+=' type scenario,
+                    # which we don't allow.
+                    # this_var_is_output_in_this_edge_name should throw a key
+                    # error when an input is not on the LHS
+                    # of any expression, meaning it's an original input. If
+                    # this happens, it means this operation may be one of the
+                    # first allowed to execute (when all inputs have this
+                    # dependency
+                    if this_var_is_output_in_this_edge_name[i] == p.edge_name:
                         raise ValueError("Variable redefinition not allowed")
-                    is_prereq_to[p.edge_name].add(output_var_to_edge_name[i])
+                    depends_on[p.edge_name].add(
+                        this_var_is_output_in_this_edge_name[i])
                 except KeyError:
-                    is_prereq_to[p.edge_name].add('_begin_')
-        self.partial_order = nx.DiGraph(is_prereq_to).reverse()
-        self.output_size_calculators = get_output_size_calculators()
-        self.cost_dict = get_cost_dict()
+                    depends_on[p.edge_name].add('_begin_')
+        self.partial_order = nx.DiGraph(depends_on).reverse()
+        self.output_size_calculators = detail.size.get_output_size_calculators()
+        self.cost_dict = detail.cost.get_cost_dict()
         self.vertices = {}
         self.init_vertices(vertex_sizes, initial_distribution)
 
     def init_vertices(self, vertex_sizes, initial_locality_distribution):
         for i in range(len(vertex_sizes)):
             for var in vertex_sizes[i]:
-                if not self.even_dist and var in initial_locality_distribution.keys():
+                if not self.even_dist and var in \
+                        initial_locality_distribution.keys():
                     dist = initial_locality_distribution[var]
                 else:
                     dist = []
@@ -163,9 +177,11 @@ class Problem:
             for edge_name in level_set:
                 edge = self.edges[edge_name]
                 output_size_func = self.get_output_size_calculator(edge)
-                operands = [self.get_size_and_distribution(k) for k in edge.inputs]
+                operands = [self.get_size_and_distribution(k)
+                            for k in edge.inputs]
                 out_size, out_dist = output_size_func(operands)
-                self.vertices[edge.output] = Vertex(edge.output, out_size, 'row', out_dist)
+                self.vertices[edge.output] = Vertex(edge.output, out_size,
+                                                    'row', out_dist)
 
     def init_hypergraph(self):
         bipartite_edge_set = []
@@ -179,7 +195,8 @@ class Problem:
         # Ensure that all elements are assigned to at most once
         # Assumes that all operations are assignments, which precludes
         # in-place operations
-        assert len(set(outputs)) == len(outputs), "Variable redefinition not allowed"
+        assert len(set(outputs)) == len(outputs), \
+            "Variable redefinition not allowed"
         self.hypergraph.add_nodes_from(self.edges.keys(), bipartite=0)
         self.hypergraph.add_nodes_from(var_names, bipartite=1)
         self.hypergraph.add_edges_from(bipartite_edge_set)
@@ -188,10 +205,8 @@ class Problem:
         return self.cost()
 
     def cost(self):
-
-
-        # Placeholder non-static
-        return len(self.vertex_sizes)
+        for e in self.edges:
+            pass
 
     def get_output_size_calculator(self, edge):
         return self.output_size_calculators[edge.get_arity()][edge.op_name]
