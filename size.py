@@ -47,7 +47,7 @@ def inv_output_size(operands):
     if arg_size == MatrixSize.large_small or arg_size == MatrixSize.small_large:
         raise ValueError("Inverse can only be performed on square matrices")
     else:
-        # Copy tiling from original
+        # Copy size and tiling from original
         return operands[0]
 
 

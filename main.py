@@ -1,9 +1,12 @@
+import detail
 import networkx as nx
 #TODO from cost_functions import get_cost_dict
-import detail
+import random
 from detail import MatrixSize
+from cost import get_cost_dict
 from networkx.algorithms import bipartite
 from networkx import DiGraph
+
 
 class Edge:
     """
@@ -34,6 +37,7 @@ class Edge:
     def get_arity(self):
         return len(self.inputs)
 
+
 class Vertex:
     """
     Class for binding together Vertex (variable) data in the tiling solver
@@ -58,6 +62,7 @@ class Vertex:
         self.tiling_type = tiling_type
         self.dist = dist
 
+
 class Locality:
     """
     Class for tracking a locality and its memory budget, and other data
@@ -75,6 +80,7 @@ class Locality:
 
     def __eq__(self, other):
         return self.memory_budget == other.memory_budget
+
 
 class Problem:
     """
@@ -110,7 +116,7 @@ class Problem:
     """
     def __init__(self, edge_set, vertex_sizes, num_locs,
                  initial_distribution=None):
-        if(initial_distribution is None):
+        if initial_distribution is None:
             self.even_dist = True
         else:
             self.even_dist = False
@@ -205,8 +211,20 @@ class Problem:
         return self.cost()
 
     def cost(self):
-        for e in self.edges:
-            pass
+        cost = 0
+        cost_dict = get_cost_dict()
+        tmp_alg_choice = {}
+        for e in self.edges.values():
+            tmp_dict = cost_dict[e.op_name]
+            algs = list(tmp_dict.keys())
+            i = random.randint(0, len(algs)-1)
+            print(i)
+            tmp_alg_choice[e.edge_name] = algs[i]
+            ins = [self.vertices[x] for x in e.inputs]
+            cost += tmp_dict[algs[i]](ins)
+        print(tmp_alg_choice, cost)
+
+
 
     def get_output_size_calculator(self, edge):
         return self.output_size_calculators[edge.get_arity()][edge.op_name]
@@ -241,8 +259,3 @@ def test():
     # [l_l, l_s, s_l, s_s]
     vertex_sizes = [['d'], ['c'], ['a', 'b'], ['e']]
     return Problem(edge_set, vertex_sizes, 1)
-    
-
-
-
-

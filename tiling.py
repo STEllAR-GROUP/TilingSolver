@@ -1,37 +1,44 @@
 from matrix_size import MatrixSize
 
 def add_map_tiling(operands):
-    size_mul = 1
-    if operands[0][0] == MatrixSize.small_small:
-        pass
-    elif operands[0][0] == MatrixSize.large_large:
-        size_mul = 4
-    else:
-        size_mul = 2
-    return operands[0][0]
+    """
+    Returns cost proper tiling for a given set of input tilings.
 
+    In the case of the ordinary addition operation, if both inputs have the
+    same tiling, we return that tiling scheme. If not, if either tiling is
+    row-major we use row. Otherwise, we default to the tiling of the LHS.
 
-def add_other_tiling(operands):
-    if operands[0][0] == MatrixSize.small_small:
-        return 0
+    INPUT:
+
+    - operands -- List of vertex objects as input
+
+    RETURNS:
+
+    - Tiling -- String representation of the output tiling
+    """
+    assert len(operands) == 2, "Addition takes two arguments only"
+    assert operands[0].size == operands[1].size, "Addition of matrices requires equal dimensions"
+    if operands[0].tiling_type == operands[1].tiling_type:
+        return operands[0].tiling_type
+    elif operands[0].tiling_type == "row" or operands[1].tiling_type == "row":
+        return "row"
     else:
-        return 1
+        return operands[0].tiling_type
 
 
 def mul_cannon_tiling(operands):
-    if operands[0][0] == MatrixSize.small_small:
-        return 0
-    else:
-        return 1
+    assert len(operands) == 2, "Matrix multiplication requires two arguments"
+    assert operands[0].tiling_type == "block", "Cannon's algorithm only allows block tiling"
+    assert operands[0].tiling_type == operands[1].tiling_type, "Cannon's algorithm only allows block tiling"
+
+    return "block"
 
 
 def mul_dot_d_tiling(operands):
-    if operands[0][0] == MatrixSize.small_large:
-        return 1
-    else:
-        return 2
+    assert len(operands) == 2, "Matrix multiplication requires two arguments"
+    return operands[0].tiling_type
 
 
 def get_tiling_dict():
     return {'mul': [mul_cannon_tiling, mul_dot_d_tiling],
-            'add': [add_map_tiling, add_other_tiling]}
+            'add': [add_map_tiling]}
