@@ -1,9 +1,11 @@
 import detail
 import networkx as nx
+import numpy as np
 #TODO from cost_functions import get_cost_dict
 import random
-from detail import MatrixSize
 from cost import get_cost_dict
+from detail import MatrixSize
+from itertools import permutations
 from networkx.algorithms import bipartite
 from networkx import DiGraph
 
@@ -214,15 +216,61 @@ class Problem:
         cost = 0
         cost_dict = get_cost_dict()
         tmp_alg_choice = {}
-        for e in self.edges.values():
-            tmp_dict = cost_dict[e.op_name]
-            algs = list(tmp_dict.keys())
-            i = random.randint(0, len(algs)-1)
-            print(i)
-            tmp_alg_choice[e.edge_name] = algs[i]
-            ins = [self.vertices[x] for x in e.inputs]
-            cost += tmp_dict[algs[i]](ins)
-        print(tmp_alg_choice, cost)
+        tmp_tiling_choice = {}
+        recommend_retiling = {e: False for e in self.edges}
+        retiling_diff = {e: 999 for e in self.edges}
+        # TODO - Make this progress through level sets, choose
+        # options optimally from the first, then impose tiling changes later
+        level_sets = self.get_level_sets()
+
+        first = True
+        for set in level_sets[1:]:
+            for edge_name in set:
+                e = self.edges[edge_name]
+                tmp_dict = cost_dict[e.op_name]
+                algs = list(tmp_dict.keys())
+                ins = [self.vertices[x] for x in e.inputs]
+                tiling_matches = self.get_two_arg_tiling_matches(len(ins))
+                num_tilings = len(tiling_matches)
+                vals = np.zeros((len(algs), num_tilings))
+                # TODO - This should be an actual look-up table for each
+                # algorithm
+                for i in range(len(algs)):
+                    for j in range(num_tilings):
+                        lhs_tiling, rhs_tiling = tiling_matches[j]
+                        ins[0].tiling_type = lhs_tiling
+                        ins[1].tiling_type = rhs_tiling
+                        tmp_alg_choice[e.edge_name] = algs[i]
+                        try:
+                            print(algs[i], i)
+                            vals[i, j] = tmp_dict[algs[i]](ins)
+                        except AssertionError:
+                            vals[i, j] = 9999999999
+                val = vals.min()
+                alg_idx, tile_idx = np.unravel_index(vals.argmin(), vals.shape)
+                if first:
+                    for i in range(len(e.inputs)):
+                        ins[i].tiling_type = tiling_matches[tile_idx][i]
+                    tmp_alg_choice[e.edge_name] = algs[alg_idx]
+                    tmp_tiling_choice[e.edge_name] = tiling_matches[tile_idx]
+                    cost += val
+                else:
+                    parent_tiles = tuple([var.tiling_type for var in ins])
+                    parent_tile_idx = tiling_matches.index(parent_tiles)
+                    parent_tile_compliant_vals = vals[:, parent_tile_idx]
+                    parent_val = parent_tile_compliant_vals.min()
+                    parent_alg_idx = parent_tile_compliant_vals.argmin()
+                    tmp_alg_choice[e.edge_name] = algs[parent_alg_idx]
+                    tmp_tiling_choice[e.edge_name] = tiling_matches[parent_tile_idx]
+                    if parent_val > val:
+                        recommend_retiling[e.edge_name] = True
+                        retiling_diff[e.edge_name] = val - parent_val
+                    cost += parent_val
+                first = False
+        print(tmp_alg_choice)
+        print(tmp_tiling_choice)
+        print(recommend_retiling)
+        print(cost)
 
 
 
@@ -249,6 +297,9 @@ class Problem:
 
     def get_distribution(self, var_name):
         return self.vertices[var_name].dist
+
+    def get_two_arg_tiling_matches(self, size):
+        return list(permutations(['row', 'col', 'block'], size))
 
 
 def test():
