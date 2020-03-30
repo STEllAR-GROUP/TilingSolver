@@ -3,7 +3,8 @@ import networkx as nx
 import numpy as np
 #TODO from cost_functions import get_cost_dict
 import random
-from cost import get_cost_dict
+from cost import Cost
+from cost_calculations import get_cost_dict
 from detail import MatrixSize
 from itertools import permutations
 from networkx.algorithms import bipartite
@@ -167,7 +168,7 @@ class Problem:
                     depends_on[p.edge_name].add('_begin_')
         self.partial_order = nx.DiGraph(depends_on).reverse()
         self.output_size_calculators = detail.size.get_output_size_calculators()
-        self.cost_dict = detail.cost.get_cost_dict()
+        self.cost_dict = detail.cost_calculations.get_cost_dict()
         self.vertices = {}
         self.init_vertices(vertex_sizes, initial_distribution)
 
@@ -228,6 +229,8 @@ class Problem:
             # What we might want to do is sort by operation type, so that, for example,
             # multiplication operations get first dibs on calling tiling for input matrices
             # ^^^ TODO ^^^
+            # TODO - Try to set up detection on lower levels for an input value which hasn't
+            # been used until then
             if first:
                 assigned = {var.var_name: False for var in self.vertices.values()}
             for edge_name in set:
@@ -235,7 +238,7 @@ class Problem:
                 tmp_dict = cost_dict[e.op_name]
                 algs = list(tmp_dict.keys())
                 ins = [self.vertices[x] for x in e.inputs.copy()]
-                tiling_matches = self.get_two_arg_tiling_matches(len(ins))
+                tiling_matches = self.get_tiling_tuples(len(ins))
                 vals = np.zeros((len(algs), len(tiling_matches)))
                 # TODO - This should be an actual look-up table for each
                 # algorithm
@@ -269,13 +272,7 @@ class Problem:
                         retiling_diff[e.edge_name] = val - parent_val
                     cost += parent_val
                 first = False
-        print(tmp_alg_choice)
-        print(tmp_tiling_choice)
-        print(recommend_retiling)
-        print(retiling_diff)
-        print(cost)
-
-
+        return Cost(tmp_alg_choice, tmp_tiling_choice, recommend_retiling, retiling_diff, cost)
 
     def get_output_size_calculator(self, edge):
         return self.output_size_calculators[edge.get_arity()][edge.op_name]
@@ -301,15 +298,5 @@ class Problem:
     def get_distribution(self, var_name):
         return self.vertices[var_name].dist
 
-    def get_two_arg_tiling_matches(self, size):
-        return list(set(permutations(['row', 'row', 'col', 'col', 'block', 'block'], size)))
-
-
-def test():
-    edge_set = {'add_0': ('add', ['f', 'a', 'b'], 'row'),
-                'mul_0': ('mul', ['g', 'b', 'c'], 'row'),
-                'add_1': ('add', ['h', 'e', 'g'], 'row'),
-                'mul_1': ('mul', ['i', 'd', 'c'], 'row')}
-    # [l_l, l_s, s_l, s_s]
-    vertex_sizes = [['d'], ['c'], ['a', 'b'], ['e']]
-    return Problem(edge_set, vertex_sizes, 1)
+    def get_tiling_tuples(self, size):
+        return sorted(list(set(permutations(['row', 'row', 'col', 'col', 'block', 'block'], size))))

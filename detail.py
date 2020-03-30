@@ -1,5 +1,5 @@
 from matrix_size import MatrixSize
-import cost
+import cost_calculations
 import tiling
 import size
 
