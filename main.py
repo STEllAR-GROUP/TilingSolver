@@ -225,32 +225,39 @@ class Problem:
 
         first = True
         for set in level_sets[1:]:
+            # What we might want to do is sort by operation type, so that, for example,
+            # multiplication operations get first dibs on calling tiling for input matrices
+            # ^^^ TODO ^^^
+            if first:
+                assigned = {var.var_name: False for var in self.vertices.values()}
             for edge_name in set:
                 e = self.edges[edge_name]
                 tmp_dict = cost_dict[e.op_name]
                 algs = list(tmp_dict.keys())
-                ins = [self.vertices[x] for x in e.inputs]
+                ins = [self.vertices[x] for x in e.inputs.copy()]
                 tiling_matches = self.get_two_arg_tiling_matches(len(ins))
                 num_tilings = len(tiling_matches)
+                print(tiling_matches)
                 vals = np.zeros((len(algs), num_tilings))
                 # TODO - This should be an actual look-up table for each
                 # algorithm
                 for i in range(len(algs)):
                     for j in range(num_tilings):
-                        lhs_tiling, rhs_tiling = tiling_matches[j]
-                        ins[0].tiling_type = lhs_tiling
-                        ins[1].tiling_type = rhs_tiling
                         tmp_alg_choice[e.edge_name] = algs[i]
+                        print(i, j, tiling_matches[j])
                         try:
-                            print(algs[i], i)
-                            vals[i, j] = tmp_dict[algs[i]](ins)
+                            print(algs[i], i, tmp_dict[algs[i]](tiling_matches[j]))
+                            vals[i, j] = tmp_dict[algs[i]](tiling_matches[j])
                         except AssertionError:
                             vals[i, j] = 9999999999
+                print(edge_name, vals)
                 val = vals.min()
                 alg_idx, tile_idx = np.unravel_index(vals.argmin(), vals.shape)
                 if first:
                     for i in range(len(e.inputs)):
-                        ins[i].tiling_type = tiling_matches[tile_idx][i]
+                        if not assigned[ins[i].var_name]:
+                            ins[i].tiling_type = tiling_matches[tile_idx][i]
+                            assigned[ins[i].var_name] = True
                     tmp_alg_choice[e.edge_name] = algs[alg_idx]
                     tmp_tiling_choice[e.edge_name] = tiling_matches[tile_idx]
                     cost += val
@@ -270,6 +277,7 @@ class Problem:
         print(tmp_alg_choice)
         print(tmp_tiling_choice)
         print(recommend_retiling)
+        print(retiling_diff)
         print(cost)
 
 
@@ -299,7 +307,7 @@ class Problem:
         return self.vertices[var_name].dist
 
     def get_two_arg_tiling_matches(self, size):
-        return list(permutations(['row', 'col', 'block'], size))
+        return list(set(permutations(['row', 'row', 'col', 'col', 'block', 'block'], size)))
 
 
 def test():
