@@ -6,7 +6,6 @@ def add_cost(operands):
         if operands[1] == 'row':
             return 0
         else:
-            print("I don't know why I'm here", operands[0], operands[1])
             return 2
     elif operands[0] == 'col':
         if operands[1] == 'col':

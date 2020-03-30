@@ -236,21 +236,16 @@ class Problem:
                 algs = list(tmp_dict.keys())
                 ins = [self.vertices[x] for x in e.inputs.copy()]
                 tiling_matches = self.get_two_arg_tiling_matches(len(ins))
-                num_tilings = len(tiling_matches)
-                print(tiling_matches)
-                vals = np.zeros((len(algs), num_tilings))
+                vals = np.zeros((len(algs), len(tiling_matches)))
                 # TODO - This should be an actual look-up table for each
                 # algorithm
                 for i in range(len(algs)):
-                    for j in range(num_tilings):
+                    for j in range(len(tiling_matches)):
                         tmp_alg_choice[e.edge_name] = algs[i]
-                        print(i, j, tiling_matches[j])
                         try:
-                            print(algs[i], i, tmp_dict[algs[i]](tiling_matches[j]))
                             vals[i, j] = tmp_dict[algs[i]](tiling_matches[j])
                         except AssertionError:
                             vals[i, j] = 9999999999
-                print(edge_name, vals)
                 val = vals.min()
                 alg_idx, tile_idx = np.unravel_index(vals.argmin(), vals.shape)
                 if first:
