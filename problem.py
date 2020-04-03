@@ -141,6 +141,7 @@ class Problem:
         # edge set
         self.ground_set = {n for n, d in self.hypergraph.nodes(data=True)
                            if d['bipartite'] == 1}
+        print(self.ground_set, vertex_sizes)
         assert self.ground_set == (self.ground_set | set(vertex_sizes[0] +
                                                          vertex_sizes[1] +
                                                          vertex_sizes[2] +
