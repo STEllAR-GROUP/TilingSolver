@@ -1,5 +1,6 @@
 from matrix_size import MatrixSize
 
+
 def add_output_size(operands):
     assert len(operands) == 2, 'Matrix addition takes two arguments'
     lhs = operands[0]
@@ -7,6 +8,13 @@ def add_output_size(operands):
     assert lhs[0] == rhs[0], "Add operation should have equal size"
     assert lhs[1] == rhs[1], "Add operation should have aligned tiles"
     return lhs
+
+
+def valid_input_sizes_add():
+    return [(MatrixSize.large_large, MatrixSize.large_large),
+            (MatrixSize.large_small, MatrixSize.large_small),
+            (MatrixSize.small_large, MatrixSize.small_large),
+            (MatrixSize.small_small, MatrixSize.small_small)]
 
 
 def mul_output_size(operands):
@@ -41,6 +49,13 @@ def mul_output_size(operands):
         return out_size, operands[0][1]
 
 
+def valid_input_sizes_mul():
+    return [(MatrixSize.large_large, MatrixSize.large_large),
+            (MatrixSize.small_small, MatrixSize.small_small),
+            (MatrixSize.large_small, MatrixSize.small_large),
+            (MatrixSize.small_large, MatrixSize.large_small)]
+
+
 def inv_output_size(operands):
     assert len(operands) == 1, 'Matrix inverse takes one argument'
     arg_size = operands[0][0]
@@ -49,6 +64,13 @@ def inv_output_size(operands):
     else:
         # Copy size and tiling from original
         return operands[0]
+
+
+def valid_input_sizes_inv():
+    return [(MatrixSize.large_large,),
+            (MatrixSize.large_small,),
+            (MatrixSize.small_large,),
+            (MatrixSize.small_small,)]
 
 
 def transpose_output_size(operands):
@@ -67,6 +89,20 @@ def transpose_output_size(operands):
     return out_size, operands[0][1]
 
 
+def valid_input_sizes_transpose():
+    return [(MatrixSize.large_large,),
+            (MatrixSize.large_small,),
+            (MatrixSize.small_large,),
+            (MatrixSize.small_small,)]
+
+
 def get_output_size_calculators():
     return {1: {'inv': inv_output_size, 'transpose': transpose_output_size},
             2: {'add': add_output_size, 'mul': mul_output_size}}
+
+
+def get_valid_input_lists():
+    return {1: {'inv': valid_input_sizes_inv,
+                'transpose': valid_input_sizes_transpose},
+            2: {'add': valid_input_sizes_add,
+                'mul': valid_input_sizes_mul}}
