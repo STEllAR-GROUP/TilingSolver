@@ -3,9 +3,9 @@ import random
 import sys
 import unittest
 
-
+from matrix_size import MatrixSize
 from problem import Problem
-from size import get_valid_input_lists
+from size import get_valid_input_lists, get_output_size_calculators
 
 class TestRandomPrograms(unittest.TestCase):
     MY_SEED = None
@@ -17,6 +17,11 @@ class TestRandomPrograms(unittest.TestCase):
                         ("inv", 1, "{} = ({})^-1"),
                         ("transpose", 1, "{} = ({})^T")]
 
+        self.get_pattern = {"add":"{} = {}+{}",
+                            "mul":"{} = {}*{}",
+                            "inv":"{} = ({})^-1",
+                            "transpose":"{} = ({})^T"}
+
     def generate_input_var_sizes(self, input_var_names):
         vertex_sizes = [[], [], [], []]
         input_vars = input_var_names.copy()
@@ -25,12 +30,28 @@ class TestRandomPrograms(unittest.TestCase):
             vertex_sizes[size].append(input_vars[i])
         return vertex_sizes
 
+    def find_output_size(self, vertex_sizes, op, inputs):
+        operands = []
+        for i in inputs:
+            found = False
+            for j in range(1, 5):
+                if i in vertex_sizes[j-1]:
+                    operands.append((MatrixSize(j), []))
+                    found = True
+            if not found:
+                raise ValueError("Input not in vertex sizes")
+        out_size = get_output_size_calculators()[len(inputs)][op](operands)
+        return out_size
+
     def find_valid_algorithms_and_inputs(self, vertex_sizes):
         valid_sizes = get_valid_input_lists()
         options = {i: {} for i in valid_sizes}
+        print(valid_sizes)
+        return_ = []
         for i in valid_sizes:
             for j in valid_sizes[i]:
-                size_tuples = valid_sizes[i][j]
+                size_tuples = valid_sizes[i][j]()
+                print(i, j, size_tuples)
                 options_tmp = []
                 for k in size_tuples:
                     indices = []
@@ -39,14 +60,16 @@ class TestRandomPrograms(unittest.TestCase):
                         indices.append(k[l].value-1)
                     size_tuple_options = vertex_sizes[indices[0]]
                     # Stack products
-                    for l in range(1, i+1):
+                    for l in range(1, i):
+                        print(vertex_sizes, indices, l)
                         size_tuple_options = itertools.product(size_tuple_options, vertex_sizes[indices[l]])
                         size_tuple_options = [(*a, b) for a, b in size_tuple_options]
                     options_tmp += size_tuple_options
                 if len(options_tmp) > 0:
                     options[i][j] = options_tmp
+                    return_ += [(i, j, tuple(a)) for a in options_tmp]
         options = {i: options[i] for i in options if len(options[i]) > 0}
-        return options
+        return return_
 
     def generate_random_problem(self):
         my_seed = self.MY_SEED
@@ -62,52 +85,63 @@ class TestRandomPrograms(unittest.TestCase):
         # space to use all input variables in at least one expression
         num_expressions = max(num_input_vars, random.randint(7, 20))
         input_var_names = list(range(num_input_vars))
-        use_all_inputs = input_var_names.copy()
         input_var_names = [chr(97+i) for i in input_var_names]
+        use_all_inputs = input_var_names.copy()
         vertex_sizes = self.generate_input_var_sizes(input_var_names)
         beginning_vertex_sizes = vertex_sizes.copy()
         all_vars = input_var_names.copy()
+        prev_layer_added = []
+        print("use_all", use_all_inputs)
         edge_set = {}
         new_var_name = chr(97+num_input_vars)
-        for i in range(num_expressions):
-            inputs = []
-            available_var_set = all_vars.copy()
-            valid_algorithms_and_args = self.find_valid_algorithms_and_inputs(vertex_sizes)
-            if len(use_all_inputs) > 0:
-                new_valid_algs_and_args = {i: {} for i in valid_algorithms_and_args}
-                for i in valid_algorithms_and_args:
-                    for j in valid_algorithms_and_args[i]:
-                        elem = use_all_inputs.pop(0)
-                        new_combos = [x for x in valid_algorithms_and_args[i][j] if elem in x]
-                        if len(new_combos) > 0:
-                            new_valid_algs_and_args[i][j] = new_combos
-                valid_algorithms_and_args = {}
-                for i in new_valid_algs_and_args:
-                    new_dict = {x for x in new_valid_algs_and_args[i] if len(x) > 0}
-                    valid_algorithms_and_args[i] = new_dict
-
-
-
-
-
-            op, arity, exp_template = random.choice(self.exp_set)
-            while arity > len(all_vars):
-                op, arity, exp_template = random.choice(self.exp_set)
-
-            for j in range(arity):
+        while num_expressions > 0:
+            expression_layer_size = random.choices(list(range(1, 5)), [0.3, .3, .3, .1])[0]
+            print(num_expressions, expression_layer_size)
+            expression_layer_size = min(num_expressions, expression_layer_size)
+            new_var_names = []
+            new_sizes = [[], [], [], []]
+            while expression_layer_size > 0:
+                inputs = []
+                available_var_set = all_vars.copy()
+                valid_algorithms_and_args = self.find_valid_algorithms_and_inputs(vertex_sizes)
+                print("Valid", valid_algorithms_and_args)
                 if len(use_all_inputs) > 0:
-                    elem = use_all_inputs.pop(0)
+                    elem = random.choice(use_all_inputs)
+                    use_all_inputs.remove(elem)
                 else:
-                    elem = random.randint(0, len(available_var_set)-1)
-                print(elem, available_var_set)
-                inputs.append(available_var_set.pop(elem))
-            edge_name = op + "_" + str(exp_idx_tracker[op])
-            exp_idx_tracker[op] += 1
-            out = new_var_name
-            all_vars.append(out)
-            new_var_name = chr(ord(new_var_name)+1)
-            exp = exp_template.format(out, *inputs)
-            edge_set[edge_name] = (op, [out]+inputs, exp)
+                    # This comes from the equation:
+                    # q*i+2*i*q = 1.0, which is based on the choice for
+                    # p = 2*q, so just created matrices are twice as likely
+                    # to be used as those which were instantiated previously
+                    i = len(all_vars)
+                    j = len(prev_layer_added)
+                    q = 1 / (2*i+j)
+                    p = 2*q
+                    var_selection_set = all_vars+prev_layer_added
+                    probabilities = [q for k in all_vars]+[p for k in prev_layer_added]
+                    print("var_selection_set", var_selection_set, prev_layer_added)
+                    elem = random.choices(var_selection_set, probabilities)[0]
+                print("Before new valid", elem, valid_algorithms_and_args)
+                new_valid_algs_and_args = [(i, j, a) for i, j, a in valid_algorithms_and_args if elem in a]
+                arity, op, inputs = random.choice(new_valid_algs_and_args)
+                pattern = self.get_pattern[op]
+                name = new_var_name
+                edge_name = op + "_" + str(exp_idx_tracker[op])
+                exp_idx_tracker[op] += 1
+                new_var_name = chr(ord(new_var_name) + 1)
+                new_var_names.append(name)
+                inputs = list(inputs)
+                exp = pattern.format(name, *inputs)
+                edge_set[edge_name] = (op, [name] + inputs, exp)
+                expression_layer_size -= 1
+                num_expressions -= 1
+                out_size = self.find_output_size(vertex_sizes, op, inputs)
+                print(out_size)
+                new_sizes[out_size[0].value-1].append(name)
+            for k in range(4):
+                vertex_sizes[k] += new_sizes[k]
+            all_vars += new_var_names
+            prev_layer_added = new_var_names
 
         print(edge_set, vertex_sizes, 1)
         return Problem(edge_set, beginning_vertex_sizes, 1)

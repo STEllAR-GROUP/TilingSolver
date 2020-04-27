@@ -2,6 +2,7 @@ from matrix_size import MatrixSize
 
 
 def add_output_size(operands):
+    # lhs/rhs should be structured as (MatrixSize, distribution)
     assert len(operands) == 2, 'Matrix addition takes two arguments'
     lhs = operands[0]
     rhs = operands[1]
