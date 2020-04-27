@@ -46,12 +46,10 @@ class TestRandomPrograms(unittest.TestCase):
     def find_valid_algorithms_and_inputs(self, vertex_sizes):
         valid_sizes = get_valid_input_lists()
         options = {i: {} for i in valid_sizes}
-        print(valid_sizes)
         return_ = []
         for i in valid_sizes:
             for j in valid_sizes[i]:
                 size_tuples = valid_sizes[i][j]()
-                print(i, j, size_tuples)
                 options_tmp = []
                 for k in size_tuples:
                     indices = []
@@ -61,7 +59,6 @@ class TestRandomPrograms(unittest.TestCase):
                     size_tuple_options = vertex_sizes[indices[0]]
                     # Stack products
                     for l in range(1, i):
-                        print(vertex_sizes, indices, l)
                         size_tuple_options = itertools.product(size_tuple_options, vertex_sizes[indices[l]])
                         size_tuple_options = [(*a, b) for a, b in size_tuple_options]
                     options_tmp += size_tuple_options
@@ -73,14 +70,12 @@ class TestRandomPrograms(unittest.TestCase):
 
     def generate_random_problem(self):
         my_seed = self.MY_SEED
-        print(self.MY_SEED)
         if my_seed is None:
             my_seed = random.randint(0, 100)
         random.seed(my_seed)
         print("Seed is {0}".format(my_seed))
         exp_idx_tracker = {i[0]: 0 for i in self.exp_set}
         num_input_vars = random.randint(1, 8)
-        print("Num_input_vars: ", num_input_vars)
         # This max(x , y) is to ensure that there is enough
         # space to use all input variables in at least one expression
         num_expressions = max(num_input_vars, random.randint(7, 20))
@@ -91,12 +86,10 @@ class TestRandomPrograms(unittest.TestCase):
         beginning_vertex_sizes = vertex_sizes.copy()
         all_vars = input_var_names.copy()
         prev_layer_added = []
-        print("use_all", use_all_inputs)
         edge_set = {}
         new_var_name = chr(97+num_input_vars)
         while num_expressions > 0:
             expression_layer_size = random.choices(list(range(1, 5)), [0.3, .3, .3, .1])[0]
-            print(num_expressions, expression_layer_size)
             expression_layer_size = min(num_expressions, expression_layer_size)
             new_var_names = []
             new_sizes = [[], [], [], []]
@@ -104,7 +97,6 @@ class TestRandomPrograms(unittest.TestCase):
                 inputs = []
                 available_var_set = all_vars.copy()
                 valid_algorithms_and_args = self.find_valid_algorithms_and_inputs(vertex_sizes)
-                print("Valid", valid_algorithms_and_args)
                 if len(use_all_inputs) > 0:
                     elem = random.choice(use_all_inputs)
                     use_all_inputs.remove(elem)
@@ -119,9 +111,7 @@ class TestRandomPrograms(unittest.TestCase):
                     p = 2*q
                     var_selection_set = all_vars+prev_layer_added
                     probabilities = [q for k in all_vars]+[p for k in prev_layer_added]
-                    print("var_selection_set", var_selection_set, prev_layer_added)
                     elem = random.choices(var_selection_set, probabilities)[0]
-                print("Before new valid", elem, valid_algorithms_and_args)
                 new_valid_algs_and_args = [(i, j, a) for i, j, a in valid_algorithms_and_args if elem in a]
                 arity, op, inputs = random.choice(new_valid_algs_and_args)
                 pattern = self.get_pattern[op]
@@ -136,22 +126,18 @@ class TestRandomPrograms(unittest.TestCase):
                 expression_layer_size -= 1
                 num_expressions -= 1
                 out_size = self.find_output_size(vertex_sizes, op, inputs)
-                print(out_size)
                 new_sizes[out_size[0].value-1].append(name)
             for k in range(4):
                 vertex_sizes[k] += new_sizes[k]
             all_vars += new_var_names
             prev_layer_added = new_var_names
 
-        print(edge_set, vertex_sizes, 1)
         return Problem(edge_set, beginning_vertex_sizes, 1)
 
     def test_cost(self):
-        print(self.MY_SEED)
         self.MY_SEED = 100
-        print(self.MY_SEED)
         problem = self.generate_random_problem()
-        problem.get_level_sets()
+        print(problem.get_level_sets())
 
 
 if __name__ == '__main__':
