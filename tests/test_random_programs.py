@@ -20,7 +20,7 @@ class TestRandomPrograms(unittest.TestCase):
         self.get_pattern = {"add":"{} = {}+{}",
                             "mul":"{} = {}*{}",
                             "inv":"{} = ({})^-1",
-                            "transpose":"{} = ({})^T"}
+                            "transpose":"{} = {}.T"}
 
     def generate_input_var_sizes(self, input_var_names):
         vertex_sizes = [[], [], [], []]
@@ -76,11 +76,13 @@ class TestRandomPrograms(unittest.TestCase):
         print("Seed is {0}".format(my_seed))
         exp_idx_tracker = {i[0]: 0 for i in self.exp_set}
         num_input_vars = random.randint(1, 8)
+
         # This max(x , y) is to ensure that there is enough
         # space to use all input variables in at least one expression
         num_expressions = max(num_input_vars, random.randint(7, 20))
         input_var_names = list(range(num_input_vars))
         input_var_names = [chr(97+i) for i in input_var_names]
+        self.inputs = input_var_names
         use_all_inputs = input_var_names.copy()
         vertex_sizes = self.generate_input_var_sizes(input_var_names)
         beginning_vertex_sizes = vertex_sizes.copy()
@@ -134,10 +136,33 @@ class TestRandomPrograms(unittest.TestCase):
 
         return Problem(edge_set, beginning_vertex_sizes, 1)
 
+
+    def generate_entire_program(self, problem):
+        inputs = self.inputs
+        small_dim = 100
+        large_dim = 3000
+        dimension_map = {MatrixSize.small_small: (small_dim, small_dim),
+                         MatrixSize.small_large: (small_dim, large_dim),
+                         MatrixSize.large_small: (large_dim, small_dim),
+                         MatrixSize.large_large: (large_dim, large_dim)}
+        program = ""
+        for i in inputs:
+            row_dim, col_dim = dimension_map[problem.vertices[i].size]
+            program += (str(i)+" = random("+str(row_dim)+", "+str(col_dim)+")\n")
+        for i in problem.get_level_sets()[1:]:
+            while len(i) > 0:
+                elem = random.choice(i)
+                i.remove(elem)
+                program += (str(problem.edges[elem])+'\n')
+        return program
+
+
     def test_cost(self):
         self.MY_SEED = 100
         problem = self.generate_random_problem()
+        print(problem.edges)
         print(problem.get_level_sets())
+        print(self.generate_entire_program(problem))
 
 
 if __name__ == '__main__':
