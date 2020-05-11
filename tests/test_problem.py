@@ -1,13 +1,14 @@
 import unittest
-from problem import Problem
+from problem import Problem, Edge
 
 
 class TestProblem(unittest.TestCase):
     def setUp(self):
-        edge_set = {'add_0': ('add', ['f', 'a', 'b'], 'row'),
-                    'mul_0': ('mul', ['g', 'b', 'c'], 'row'),
-                    'add_1': ('add', ['h', 'e', 'g'], 'row'),
-                    'mul_1': ('mul', ['i', 'd', 'c'], 'row')}
+        edge_set = {Edge('add', 0, 'f', ['a', 'b'], 'row'),
+                    Edge('add', 1, 'f', ['f', 'a'], 'row'),
+                    Edge('mul', 2, 'g', ['b', 'c'], 'row'),
+                    Edge('add', 3, 'h', ['e', 'g'], 'row'),
+                    Edge('mul', 4, 'i', ['d', 'c'], 'row')}
         # [l_l, l_s, s_l, s_s]
         vertex_sizes = [['d'], ['c'], ['a', 'b'], ['e']]
         self.problem = Problem(edge_set, vertex_sizes, 1)
@@ -17,7 +18,7 @@ class TestProblem(unittest.TestCase):
 
     def test_level_sets(self):
         level_sets = self.problem.get_level_sets()
-        self.assertEqual(level_sets, [['_begin_'], ['add_0', 'mul_0', 'mul_1'], ['add_1']])
+        self.assertEqual(level_sets, [['_begin_'], ['add0', 'mul4', 'mul2'], ['add3', 'add1']])
 
     def test_get_tiling_tuples(self):
         tiling_matches = self.problem.get_tiling_tuples(2)

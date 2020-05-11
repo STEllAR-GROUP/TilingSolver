@@ -1,4 +1,6 @@
 import itertools
+import matplotlib.pyplot as plt
+import networkx as nx
 import random
 import sys
 import unittest
@@ -148,7 +150,7 @@ class TestRandomPrograms(unittest.TestCase):
         program = ""
         for i in inputs:
             row_dim, col_dim = dimension_map[problem.vertices[i].size]
-            program += (str(i)+" = random("+str(row_dim)+", "+str(col_dim)+")\n")
+            program += (str(i)+" = np.random("+str(row_dim)+", "+str(col_dim)+")\n")
         for i in problem.get_level_sets()[1:]:
             while len(i) > 0:
                 elem = random.choice(i)
@@ -163,6 +165,11 @@ class TestRandomPrograms(unittest.TestCase):
         print(problem.edges)
         print(problem.get_level_sets())
         print(self.generate_entire_program(problem))
+        print(type(problem.partial_order))
+        nx.draw(problem.partial_order)
+        plt.show()
+        print(list(problem.partial_order.edges))
+        #print((nx.connected_components(problem.partial_order)))
 
 
 if __name__ == '__main__':

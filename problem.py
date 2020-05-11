@@ -10,6 +10,23 @@ from itertools import permutations
 from networkx.algorithms import bipartite
 from networkx import DiGraph
 
+class Operation:
+    """
+    Class for tracking global ordering in a program.
+    Mainly to support reassignments in the input data structure
+
+    """
+    def __init__(self, op_name, op_order):
+        self.name = op_name
+        self.order = op_order
+
+    def __lt__(self, other):
+        return self.order < other.order
+
+    def __le__(self, other):
+        return self.order <= other.order
+
+
 
 class Edge:
     """
@@ -18,9 +35,9 @@ class Edge:
 
     INPUT:
 
-    - edge_name -- A string representation of the edge_name
-
     - op_name -- Name of the operation being performed
+
+    - program_index -- Index of operation within program
 
     - output -- Variable being assigned
 
@@ -28,12 +45,16 @@ class Edge:
 
     - expression -- AST representation for the assignment and operation
     """
-    def __init__(self, edge_name, op_name, output, inputs, expression):
+    def __init__(self, op_name, program_index, output, inputs, expression):
         # We only support expressions with one assigned variable for now
-        self.edge_name = edge_name
+        self.edge_name = op_name+str(program_index)
         self.op_name = op_name
+        self.program_index = program_index
         self.output = output
         self.inputs = inputs
+        self.inplace = False
+        if self.output in self.inputs:
+            self.inplace = True
         self.vars = [self.output]+self.inputs
         self.expression = expression
 
@@ -45,6 +66,12 @@ class Edge:
 
     def __str__(self):
         return self.expression
+
+    def __lt__(self, other):
+        return self.program_index < other.program_index
+
+    def __le__(self, other):
+        return self.program_index <= other.program_index
 
 class Vertex:
     """
@@ -129,16 +156,14 @@ class Problem:
         else:
             self.even_dist = False
 
-        assert len(edge_set.values()) > 0
-        for k in edge_set.values():
-            assert len(list(k)) == 3, "Input data formatted incorrectly"
+        assert len(edge_set) > 0
+        for k in edge_set:
+            assert isinstance(k, Edge), "Input data formatted incorrectly"
 
         self.num_locs = num_locs
-        self.edges = {edge_name:
-                      Edge(edge_name, op_name, k[0], k[1:], expression)
-                      for edge_name, (op_name, k, expression)
-                      in edge_set.items()}
-
+        self.edges = {edge.edge_name: edge
+                      for edge in edge_set}
+        print(self.edges)
         self.hypergraph = nx.Graph()
         self.init_hypergraph()
 
@@ -151,32 +176,58 @@ class Problem:
                                                          vertex_sizes[1] +
                                                          vertex_sizes[2] +
                                                          vertex_sizes[3]))
-        this_var_is_output_in_this_edge_name = {p.output: p.edge_name
-                                                for p in self.edges.values()}
+        unique_output_list = set([p.output for p in self.edges.values()])
+        duplicate_outputs = {p: [] for p in unique_output_list}
+        for edge in self.edges.values():
+            duplicate_outputs[edge.output] += [edge]
+        for p in duplicate_outputs:
+            duplicate_outputs[p] = sorted(duplicate_outputs[p])
+
         depends_on = {p.edge_name: set([]) for p in self.edges.values()}
+        print(self.edges.values())
+
+        print("Duplicate outs", duplicate_outputs)
         for p in self.edges.values():
             for i in p.inputs:
                 try:
-                    # This 'if' is checking if one of our inputs is the output
-                    # to this expression, i.e., it's in a '+=' type scenario,
-                    # which we don't allow.
+                    print(p, i)
                     # this_var_is_output_in_this_edge_name should throw a key
                     # error when an input is not on the LHS
                     # of any expression, meaning it's an original input. If
                     # this happens, it means this operation may be one of the
                     # first allowed to execute (when all inputs have this
                     # dependency
-                    if this_var_is_output_in_this_edge_name[i] == p.edge_name:
-                        raise ValueError("Variable redefinition not allowed")
-                    depends_on[p.edge_name].add(
-                        this_var_is_output_in_this_edge_name[i])
+                    if len(duplicate_outputs[i]) > 1:
+                        # Find in the duplicate outputs the one that has program index less than
+                        # i, but is the maximal one where that condition holds
+                        idx = 0
+                        print(p.edge_name, " got in loop")
+                        for j in duplicate_outputs[i]:
+                            print(i, j)
+                            if p.program_index > j.program_index:
+                                break
+                            idx += 1
+                        if idx == len(duplicate_outputs[i]):
+                            idx = len(duplicate_outputs[i])-1
+                        print(idx, duplicate_outputs[i])
+                        depends_on[p.edge_name].add(
+                            duplicate_outputs[i][idx].edge_name
+                        )
+                    elif len(duplicate_outputs[i]) > 0:
+                        depends_on[p.edge_name].add(
+                            duplicate_outputs[i][0].edge_name)
+                    else:
+                        raise KeyError
                 except KeyError:
                     depends_on[p.edge_name].add('_begin_')
+        print(depends_on)
         self.partial_order = nx.DiGraph(depends_on).reverse()
+        print("Done with partial_order")
         self.output_size_calculators = detail.size.get_output_size_calculators()
         self.cost_dict = detail.cost_calculations.get_cost_dict()
         self.vertices = {}
         self.init_vertices(vertex_sizes, initial_distribution)
+        print("Done with init_vertices")
 
     def init_vertices(self, vertex_sizes, initial_locality_distribution):
         for i in range(len(vertex_sizes)):
@@ -188,6 +239,9 @@ class Problem:
                     dist = []
                 self.vertices[var] = Vertex(var, MatrixSize(i+1), 'row', dist)
         # The first level set is the artificial '_begin_' node
+        print("Getting level sets")
+        k = self.get_level_sets()
+        print("Level sets: ", k)
         for level_set in self.get_level_sets()[1:]:
             for edge_name in level_set:
                 edge = self.edges[edge_name]
@@ -199,6 +253,7 @@ class Problem:
                                                     'row', out_dist)
 
     def init_hypergraph(self):
+        print("Hypergraph part")
         bipartite_edge_set = []
         for p in self.edges.values():
             for var in p.vars:
@@ -207,11 +262,6 @@ class Problem:
         # Flatten blocks into set
         var_names = {i for k in blocks for i in k}
         outputs = [p.output for p in self.edges.values()]
-        # Ensure that all elements are assigned to at most once
-        # Assumes that all operations are assignments, which precludes
-        # in-place operations
-        assert len(set(outputs)) == len(outputs), \
-            "Variable redefinition not allowed"
         self.hypergraph.add_nodes_from(self.edges.keys(), bipartite=0)
         self.hypergraph.add_nodes_from(var_names, bipartite=1)
         self.hypergraph.add_edges_from(bipartite_edge_set)
@@ -286,8 +336,12 @@ class Problem:
     def get_level_sets(self):
         sets = []
         in_degrees = dict(self.partial_order.in_degree)
+        count = 0
+        #print(in_degrees)
         while len(in_degrees.keys()) > 0:
+            print(count, in_degrees)
             tmp = [x[0] for x in in_degrees.items() if x[1] == 0]
+            print(tmp)
             neighbors = [self.partial_order.neighbors(y) for y in tmp]
             sets += [tmp]
             for k in tmp:
@@ -295,6 +349,7 @@ class Problem:
             for i in neighbors:
                 for j in i:
                     in_degrees[j] -= 1
+            count += 1
         return sets
 
     def get_size_and_distribution(self, var_name):
