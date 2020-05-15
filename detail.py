@@ -1,7 +1,40 @@
 from matrix_size import MatrixSize
-import cost_calculations
 import tiling
-import size
+
+from ops.add import Add
+from ops.inv import Inv
+from ops.mul import Mul
+from ops.transpose import Transpose
+
+
+def get_edge_types():
+    return [Add, Mul, Inv, Transpose]
+
+
+def get_arity_op_list(name):
+    calcs = {}
+    for typ in get_edge_types():
+        calcs[typ.num_inputs] = {}
+    for typ in get_edge_types():
+        calcs[typ.num_inputs][typ.op_name] = getattr(typ, name)
+    return calcs
+
+def get_output_size_calculators():
+    return get_arity_op_list('output_size')
+
+def get_valid_input_lists():
+    return get_arity_op_list('valid_input_sizes')
+
+
+def get_op_dict(name):
+    calcs = {}
+    for typ in get_edge_types():
+        calcs[typ.op_name] = getattr(typ, name)()
+    return calcs
+
+
+def get_all_cost_dicts():
+    return get_op_dict('get_cost_dict')
 
 
 def get_level_sets(partial_order):
@@ -20,23 +53,3 @@ def get_level_sets(partial_order):
                 in_degrees[j] -= 1
         count += 1
     return sets
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

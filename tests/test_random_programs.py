@@ -1,3 +1,4 @@
+import edge
 import itertools
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -5,25 +6,14 @@ import random
 import sys
 import unittest
 
-from detail import get_level_sets
+from detail import get_edge_types, get_level_sets, get_valid_input_lists, get_output_size_calculators
+from edge import Edge
 from matrix_size import MatrixSize
-from problem import Problem, Edge
-from size import get_valid_input_lists, get_output_size_calculators
+from problem import Problem
+
 
 class TestRandomPrograms(unittest.TestCase):
     MY_SEED = None
-
-    def setUp(self):
-        # Tuples of op, arity, and print pattern
-        self.exp_set = [("add", 2, "{} = {}+{}"),
-                        ("mul", 2, "{} = {}*{}"),
-                        ("inv", 1, "{} = ({})^-1"),
-                        ("transpose", 1, "{} = ({})^T")]
-
-        self.get_pattern = {"add":"{} = {}+{}",
-                            "mul":"{} = {}*{}",
-                            "inv":"{} = ({})^-1",
-                            "transpose":"{} = {}.T"}
 
     def generate_input_var_sizes(self, input_var_names):
         vertex_sizes = [[], [], [], []]
@@ -43,13 +33,14 @@ class TestRandomPrograms(unittest.TestCase):
                     found = True
             if not found:
                 raise ValueError("Input not in vertex sizes")
-        out_size = get_output_size_calculators()[len(inputs)][op](operands)
+        out_size = get_output_size_calculators()[len(inputs)][op.op_name](operands)
         return out_size
 
     def find_valid_algorithms_and_inputs(self, vertex_sizes):
         valid_sizes = get_valid_input_lists()
         options = {i: {} for i in valid_sizes}
         return_ = []
+        types = {typ.op_name: typ for typ in get_edge_types()}
         for i in valid_sizes:
             for j in valid_sizes[i]:
                 size_tuples = valid_sizes[i][j]()
@@ -67,7 +58,7 @@ class TestRandomPrograms(unittest.TestCase):
                     options_tmp += size_tuple_options
                 if len(options_tmp) > 0:
                     options[i][j] = options_tmp
-                    return_ += [(i, j, tuple(a)) for a in options_tmp]
+                    return_ += [(i, types[j], tuple(a)) for a in options_tmp]
         options = {i: options[i] for i in options if len(options[i]) > 0}
         return return_
 
@@ -77,7 +68,7 @@ class TestRandomPrograms(unittest.TestCase):
             my_seed = random.randint(0, 100)
         random.seed(my_seed)
         print("Seed is {0}".format(my_seed))
-        exp_idx_tracker = {i[0]: 0 for i in self.exp_set}
+        exp_idx_tracker = {i.op_name: 0 for i in get_edge_types()}
         num_input_vars = random.randint(1, 8)
 
         # This max(x , y) is to ensure that there is enough
@@ -120,15 +111,12 @@ class TestRandomPrograms(unittest.TestCase):
                     elem = random.choices(var_selection_set, probabilities)[0]
                 new_valid_algs_and_args = [(i, j, a) for i, j, a in valid_algorithms_and_args if elem in a]
                 arity, op, inputs = random.choice(new_valid_algs_and_args)
-                pattern = self.get_pattern[op]
                 name = new_var_name
-                edge_name = op + "_" + str(exp_idx_tracker[op])
-                exp_idx_tracker[op] += 1
+                exp_idx_tracker[op.op_name] += 1
                 new_var_name = chr(ord(new_var_name) + 1)
                 new_var_names.append(name)
                 inputs = list(inputs)
-                exp = pattern.format(name, *inputs)
-                edge_set.add(Edge(op, program_index, name, inputs, exp))
+                edge_set.add(op(program_index, name, inputs))
                 expression_layer_size -= 1
                 num_expressions -= 1
                 out_size = self.find_output_size(vertex_sizes, op, inputs)
@@ -164,7 +152,7 @@ class TestRandomPrograms(unittest.TestCase):
 
 
     def test_cost(self):
-        #self.MY_SEED = 100
+        self.MY_SEED = 101
         problem = self.generate_random_problem()
         print(problem.edges)
         print(get_level_sets(problem.partial_order))

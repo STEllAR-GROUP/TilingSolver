@@ -5,57 +5,12 @@ import numpy as np
 import random
 
 from cost import Cost
-from cost_calculations import get_cost_dict
-from detail import MatrixSize
+from detail import MatrixSize, get_all_cost_dicts
+from edge import Edge
 from itertools import permutations
 from networkx.algorithms import bipartite
 from networkx import DiGraph
 
-
-class Edge:
-    """
-    Class for binding together Edge (assignment and arithmetic operation)
-    data in the tiling solver
-
-    INPUT:
-
-    - op_name -- Name of the operation being performed
-
-    - program_index -- Index of operation within program
-
-    - output -- Variable being assigned
-
-    - inputs -- Inputs to the operation
-
-    - expression -- AST representation for the assignment and operation
-    """
-    def __init__(self, op_name, program_index, output, inputs, expression):
-        # We only support expressions with one assigned variable for now
-        self.edge_name = op_name+str(program_index)
-        self.op_name = op_name
-        self.program_index = program_index
-        self.output = output
-        self.inputs = inputs
-        self.inplace = False
-        if self.output in self.inputs:
-            self.inplace = True
-        self.vars = [self.output]+self.inputs
-        self.expression = expression
-
-    def get_arity(self):
-        return len(self.inputs)
-
-    def __repr__(self):
-        return self.expression
-
-    def __str__(self):
-        return self.expression
-
-    def __lt__(self, other):
-        return self.program_index < other.program_index
-
-    def __le__(self, other):
-        return self.program_index <= other.program_index
 
 class Vertex:
     """
@@ -107,25 +62,9 @@ class Problem:
 
     INPUT:
     
-    - edge_set -- A dictionary containing tuples of (op_name,
-    [inputs/outputs to operation] as sets, expression from AST)
+    - edge_set -- A set containing Edge objects
 
-    We use the list of inputs/outputs to feed into the construction
-    of the hypergraph.
-
-    -- NOTE -- 
-    Order for the inputs/outputs is important in the edge set, as the order
-    informs how the cost function calculates cost.
-    However, since we don't allow any variable to be assigned more than
-    once, the fact that the bipartite graph may not preserve the order of
-    inputs/outputs indefinitely doesn't matter. Input matrices to an operation
-    shouldn't be assigned later since they were assigned at initialization/being
-    passed into the function. Output matrices shouldn't be assigned again either,
-    obviously, meaning this set of inputs/outputs is guaranteed to be unique,
-    and equality can be tested by vertex membership agnostic of the order.
-    -- NOTE --
-
-    - vertex_sizes -- A tuple of lists of variable_names.
+    - vertex_sizes -- A list of lists of variable_names.
     The tuple is structured as (big_big, big_small, small_big, small_small)
 
     - num_locs -- Number of localities to be used in computation
@@ -198,8 +137,8 @@ class Problem:
                 except KeyError:
                     depends_on[p.edge_name].add('_begin_')
         self.partial_order = nx.DiGraph(depends_on).reverse()
-        self.output_size_calculators = detail.size.get_output_size_calculators()
-        self.cost_dict = detail.cost_calculations.get_cost_dict()
+        self.output_size_calculators = detail.get_output_size_calculators()
+        self.cost_dict = detail.get_all_cost_dicts()
         self.vertices = {}
         self.init_vertices(vertex_sizes, initial_distribution)
 
@@ -240,7 +179,7 @@ class Problem:
 
     def cost(self):
         cost = 0
-        cost_dict = get_cost_dict()
+        cost_dict = get_all_cost_dicts()
         tmp_alg_choice = {}
         tmp_tiling_choice = {}
         recommend_retiling = {e: False for e in self.edges}

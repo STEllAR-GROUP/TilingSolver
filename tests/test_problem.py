@@ -2,7 +2,7 @@ import detail
 import unittest
 
 from util_test import make_basic_edge_set
-from problem import Problem, Edge
+from problem import Problem
 
 
 class TestProblem(unittest.TestCase):
