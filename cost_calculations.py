@@ -52,6 +52,8 @@ def mul_dot_d_cost(operands):
             return 4
 
 
+# Transpose (rc,cr,bb+) inverse (cc)
+
 def get_cost_dict():
     return {'mul': {'cannon': mul_cannon_cost, 'dot_d': mul_dot_d_cost},
             'add': {'normal_add': add_cost}}

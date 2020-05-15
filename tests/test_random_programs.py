@@ -5,8 +5,9 @@ import random
 import sys
 import unittest
 
+from detail import get_level_sets
 from matrix_size import MatrixSize
-from problem import Problem
+from problem import Problem, Edge
 from size import get_valid_input_lists, get_output_size_calculators
 
 class TestRandomPrograms(unittest.TestCase):
@@ -90,7 +91,8 @@ class TestRandomPrograms(unittest.TestCase):
         beginning_vertex_sizes = vertex_sizes.copy()
         all_vars = input_var_names.copy()
         prev_layer_added = []
-        edge_set = {}
+        edge_set = set()
+        program_index = 0
         new_var_name = chr(97+num_input_vars)
         while num_expressions > 0:
             expression_layer_size = random.choices(list(range(1, 5)), [0.3, .3, .3, .1])[0]
@@ -126,16 +128,17 @@ class TestRandomPrograms(unittest.TestCase):
                 new_var_names.append(name)
                 inputs = list(inputs)
                 exp = pattern.format(name, *inputs)
-                edge_set[edge_name] = (op, [name] + inputs, exp)
+                edge_set.add(Edge(op, program_index, name, inputs, exp))
                 expression_layer_size -= 1
                 num_expressions -= 1
                 out_size = self.find_output_size(vertex_sizes, op, inputs)
                 new_sizes[out_size[0].value-1].append(name)
+                program_index += 1
             for k in range(4):
                 vertex_sizes[k] += new_sizes[k]
             all_vars += new_var_names
             prev_layer_added = new_var_names
-
+        print("Rand prog", edge_set, new_var_name)
         return Problem(edge_set, beginning_vertex_sizes, 1)
 
 
@@ -151,19 +154,20 @@ class TestRandomPrograms(unittest.TestCase):
         for i in inputs:
             row_dim, col_dim = dimension_map[problem.vertices[i].size]
             program += (str(i)+" = np.random("+str(row_dim)+", "+str(col_dim)+")\n")
-        for i in problem.get_level_sets()[1:]:
+        for i in get_level_sets(problem.partial_order)[1:]:
             while len(i) > 0:
-                elem = random.choice(i)
+                print(i)
+                elem = random.choice(list(i))
                 i.remove(elem)
                 program += (str(problem.edges[elem])+'\n')
         return program
 
 
     def test_cost(self):
-        self.MY_SEED = 100
+        #self.MY_SEED = 100
         problem = self.generate_random_problem()
         print(problem.edges)
-        print(problem.get_level_sets())
+        print(get_level_sets(problem.partial_order))
         print(self.generate_entire_program(problem))
         print(type(problem.partial_order))
         nx.draw(problem.partial_order)

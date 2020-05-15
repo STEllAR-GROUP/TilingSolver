@@ -69,8 +69,6 @@ def inv_output_size(operands):
 
 def valid_input_sizes_inv():
     return [(MatrixSize.large_large,),
-            (MatrixSize.large_small,),
-            (MatrixSize.small_large,),
             (MatrixSize.small_small,)]
 
 

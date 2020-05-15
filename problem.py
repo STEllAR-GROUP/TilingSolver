@@ -3,6 +3,7 @@ import networkx as nx
 import numpy as np
 #TODO from cost_functions import get_cost_dict
 import random
+
 from cost import Cost
 from cost_calculations import get_cost_dict
 from detail import MatrixSize
@@ -163,19 +164,17 @@ class Problem:
         self.num_locs = num_locs
         self.edges = {edge.edge_name: edge
                       for edge in edge_set}
-        print(self.edges)
         self.hypergraph = nx.Graph()
         self.init_hypergraph()
-
         # Make sure the big vertex list only includes vertices in the
         # edge set
         self.ground_set = {n for n, d in self.hypergraph.nodes(data=True)
                            if d['bipartite'] == 1}
-        print(self.ground_set, vertex_sizes)
         assert self.ground_set == (self.ground_set | set(vertex_sizes[0] +
                                                          vertex_sizes[1] +
                                                          vertex_sizes[2] +
                                                          vertex_sizes[3]))
+
         unique_output_list = set([p.output for p in self.edges.values()])
         duplicate_outputs = {p: [] for p in unique_output_list}
         for edge in self.edges.values():
@@ -184,32 +183,27 @@ class Problem:
             duplicate_outputs[p] = sorted(duplicate_outputs[p])
 
         depends_on = {p.edge_name: set([]) for p in self.edges.values()}
-        print(self.edges.values())
-
-        print("Duplicate outs", duplicate_outputs)
         for p in self.edges.values():
             for i in p.inputs:
                 try:
-                    print(p, i)
-                    # this_var_is_output_in_this_edge_name should throw a key
-                    # error when an input is not on the LHS
-                    # of any expression, meaning it's an original input. If
-                    # this happens, it means this operation may be one of the
-                    # first allowed to execute (when all inputs have this
-                    # dependency
+                    # If a variable is never redeclared, this is easy
                     if len(duplicate_outputs[i]) > 1:
                         # Find in the duplicate outputs the one that has program index less than
                         # i, but is the maximal one where that condition holds
+                        # TODO -- Below
+                        # Should probably also check to ensure we allow redeclaration for this op
+                        # For instance, redeclaration of multiplication doesn't make sense,
+                        # cause we have to allocate memory for an intermediate matrix anyway,
+                        # so we might as well just mark it as a new var entirely
+                        # But if we're doing it in place like negation, or a +=, we don't
+                        # need an intermediate matrix
                         idx = 0
-                        print(p.edge_name, " got in loop")
                         for j in duplicate_outputs[i]:
-                            print(i, j)
                             if p.program_index > j.program_index:
                                 break
                             idx += 1
                         if idx == len(duplicate_outputs[i]):
                             idx = len(duplicate_outputs[i])-1
-                        print(idx, duplicate_outputs[i])
                         depends_on[p.edge_name].add(
                             duplicate_outputs[i][idx].edge_name
                         )
@@ -220,14 +214,11 @@ class Problem:
                         raise KeyError
                 except KeyError:
                     depends_on[p.edge_name].add('_begin_')
-        print(depends_on)
         self.partial_order = nx.DiGraph(depends_on).reverse()
-        print("Done with partial_order")
         self.output_size_calculators = detail.size.get_output_size_calculators()
         self.cost_dict = detail.cost_calculations.get_cost_dict()
         self.vertices = {}
         self.init_vertices(vertex_sizes, initial_distribution)
-        print("Done with init_vertices")
 
     def init_vertices(self, vertex_sizes, initial_locality_distribution):
         for i in range(len(vertex_sizes)):
@@ -239,10 +230,7 @@ class Problem:
                     dist = []
                 self.vertices[var] = Vertex(var, MatrixSize(i+1), 'row', dist)
         # The first level set is the artificial '_begin_' node
-        print("Getting level sets")
-        k = self.get_level_sets()
-        print("Level sets: ", k)
-        for level_set in self.get_level_sets()[1:]:
+        for level_set in detail.get_level_sets(self.partial_order)[1:]:
             for edge_name in level_set:
                 edge = self.edges[edge_name]
                 output_size_func = self.get_output_size_calculator(edge)
@@ -253,7 +241,6 @@ class Problem:
                                                     'row', out_dist)
 
     def init_hypergraph(self):
-        print("Hypergraph part")
         bipartite_edge_set = []
         for p in self.edges.values():
             for var in p.vars:
@@ -261,7 +248,6 @@ class Problem:
         blocks = [p.vars for p in self.edges.values()]
         # Flatten blocks into set
         var_names = {i for k in blocks for i in k}
-        outputs = [p.output for p in self.edges.values()]
         self.hypergraph.add_nodes_from(self.edges.keys(), bipartite=0)
         self.hypergraph.add_nodes_from(var_names, bipartite=1)
         self.hypergraph.add_edges_from(bipartite_edge_set)
@@ -278,7 +264,7 @@ class Problem:
         retiling_diff = {e: 999 for e in self.edges}
         # TODO - Make this progress through level sets, choose
         # options optimally from the first, then impose tiling changes later
-        level_sets = self.get_level_sets()
+        level_sets = detail.get_level_sets(self.partial_order)
 
         first = True
         for set in level_sets[1:]:
@@ -332,25 +318,6 @@ class Problem:
 
     def get_output_size_calculator(self, edge):
         return self.output_size_calculators[edge.get_arity()][edge.op_name]
-
-    def get_level_sets(self):
-        sets = []
-        in_degrees = dict(self.partial_order.in_degree)
-        count = 0
-        #print(in_degrees)
-        while len(in_degrees.keys()) > 0:
-            print(count, in_degrees)
-            tmp = [x[0] for x in in_degrees.items() if x[1] == 0]
-            print(tmp)
-            neighbors = [self.partial_order.neighbors(y) for y in tmp]
-            sets += [tmp]
-            for k in tmp:
-                in_degrees.pop(k)
-            for i in neighbors:
-                for j in i:
-                    in_degrees[j] -= 1
-            count += 1
-        return sets
 
     def get_size_and_distribution(self, var_name):
         var = self.vertices[var_name]
