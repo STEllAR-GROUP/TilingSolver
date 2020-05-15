@@ -11,23 +11,6 @@ from itertools import permutations
 from networkx.algorithms import bipartite
 from networkx import DiGraph
 
-class Operation:
-    """
-    Class for tracking global ordering in a program.
-    Mainly to support reassignments in the input data structure
-
-    """
-    def __init__(self, op_name, op_order):
-        self.name = op_name
-        self.order = op_order
-
-    def __lt__(self, other):
-        return self.order < other.order
-
-    def __le__(self, other):
-        return self.order <= other.order
-
-
 
 class Edge:
     """
