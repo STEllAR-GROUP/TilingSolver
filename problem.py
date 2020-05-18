@@ -30,11 +30,27 @@ class Vertex:
     available localities, (that is, when all available localities are used
     in distributing this data structure) loc_list is simply empty
     """
-    def __init__(self, var_name, size, tiling_type, dist):
+    tiling_types = ['row', 'col', 'block']
+
+    def __init__(self, var_name, size, generation, tiling_type, dist):
+        # Add generation value to track how many times this variable changes
         self.var_name = var_name
         self.size = size
+        # The combination of the var_name and generation should give a
+        # globally unique identifier to the data enclosed therein.
+        # This is mainly because the generation can't be the same for
+        # two different reassignments (it might be if we genuinely parsed
+        # conditional structures) due to how the dependency graph calculation
+        # works
+        self.generation = generation
+        assert tiling_type in self.tiling_types
         self.tiling_type = tiling_type
         self.dist = dist
+        self.tiling_idx = self.tiling_types.index(self.tiling_type)
+
+    def next_tiling(self):
+        self.tiling_idx = (self.tiling_idx+1) % len(self.tiling_types)
+        self.tiling_type = self.tiling_types[self.tiling_idx]
 
 
 class Locality:
@@ -112,13 +128,13 @@ class Problem:
                     if len(duplicate_outputs[i]) > 1:
                         # Find in the duplicate outputs the one that has program index less than
                         # i, but is the maximal one where that condition holds
-                        # TODO -- Below
-                        # Should probably also check to ensure we allow redeclaration for this op
+                        # We want to ensure we allow redeclaration for this op
                         # For instance, redeclaration of multiplication doesn't make sense,
                         # cause we have to allocate memory for an intermediate matrix anyway,
                         # so we might as well just mark it as a new var entirely
                         # But if we're doing it in place like negation, or a +=, we don't
                         # need an intermediate matrix
+                        assert p.reassignable(), "Operation {} not in-place reassign-able".format(p.__str__())
                         idx = 0
                         for j in duplicate_outputs[i]:
                             if p.program_index > j.program_index:
@@ -140,9 +156,10 @@ class Problem:
         self.output_size_calculators = detail.get_output_size_calculators()
         self.cost_dict = detail.get_all_cost_dicts()
         self.vertices = {}
-        self.init_vertices(vertex_sizes, initial_distribution)
+        self.init_vertices(vertex_sizes, duplicate_outputs, initial_distribution)
 
-    def init_vertices(self, vertex_sizes, initial_locality_distribution):
+    def init_vertices(self, vertex_sizes, duplicate_outputs, initial_locality_distribution):
+        # Initialize all of the variables in the input layer
         for i in range(len(vertex_sizes)):
             for var in vertex_sizes[i]:
                 if not self.even_dist and var in \
@@ -150,7 +167,7 @@ class Problem:
                     dist = initial_locality_distribution[var]
                 else:
                     dist = []
-                self.vertices[var] = Vertex(var, MatrixSize(i+1), 'row', dist)
+                self.vertices[var] = Vertex(var, MatrixSize(i+1), 0, 'row', dist)
         # The first level set is the artificial '_begin_' node
         for level_set in detail.get_level_sets(self.partial_order)[1:]:
             for edge_name in level_set:
@@ -158,9 +175,24 @@ class Problem:
                 output_size_func = self.get_output_size_calculator(edge)
                 operands = [self.get_size_and_distribution(k)
                             for k in edge.inputs]
+                generation = duplicate_outputs[edge.output].index(edge)
+                # TODO - Might be worthwhile to verify that this output
+                # only happens once in this level_set as output,
+                # otherwise we're doing something wrong in the dependency
+                # graph generation. But maybe that should just be a test?
                 out_size, out_dist = output_size_func(operands)
-                self.vertices[edge.output] = Vertex(edge.output, out_size,
-                                                    'row', out_dist)
+                var_name = edge.output+str(generation)
+                # This is a temporary measure. We might want to do more nuanced
+                # analyses where we discriminate between reassignments. If so,
+                # this should be a higher level config setting
+                use_duplicates = False
+                if use_duplicates:
+                    self.vertices[var_name] = Vertex(var_name, out_size, generation, 'row', out_dist)
+                else:
+                    if edge.output not in self.vertices.keys():
+                        self.vertices[edge.output] = Vertex(edge.output, out_size,
+                                                            0, 'row',
+                                                            out_dist)
 
     def init_hypergraph(self):
         bipartite_edge_set = []

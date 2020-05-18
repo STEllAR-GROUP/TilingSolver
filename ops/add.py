@@ -1,12 +1,13 @@
 import edge
 
-from detail import MatrixSize
+from matrix_size import MatrixSize
 
 
 class Add(edge.Edge):
     num_inputs = 2
     expression = "{} = {}+{}"
     op_name = "add"
+    _reassignable = True
 
     def __init__(self, program_index, output, inputs):
         super(Add, self).__init__(program_index, output, inputs)
@@ -50,3 +51,17 @@ class Add(edge.Edge):
     @staticmethod
     def get_cost_dict():
         return {'normal_add': Add.add_cost}
+
+    @staticmethod
+    def num_implementations():
+        return 1
+
+    @staticmethod
+    def random_imp():
+        return "normal"
+
+    class Node(edge.Edge.Node):
+        def __init__(self, add, children):
+            self.add = add
+            self.num_children = self.add.num_inputs
+            self.child = children[0]

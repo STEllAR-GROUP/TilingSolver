@@ -1,12 +1,13 @@
 import edge
 
-from detail import MatrixSize
+from matrix_size import MatrixSize
 
 
 class Inv(edge.Edge):
     num_inputs = 1
     expression = "{} = ({})^-1"
     op_name = "inv"
+    _reassignable = False
 
     def __init__(self, program_index, output, inputs):
 
@@ -35,3 +36,10 @@ class Inv(edge.Edge):
     def get_cost_dict():
         return {'normal': Inv.normal_cost}
 
+    @staticmethod
+    def num_implementations():
+        return 1
+
+    @staticmethod
+    def random_imp():
+        return "normal"

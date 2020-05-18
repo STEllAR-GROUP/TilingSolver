@@ -1,12 +1,14 @@
 import edge
+import random
 
-from detail import MatrixSize
+from matrix_size import MatrixSize
 
 
 class Mul(edge.Edge):
     num_inputs = 2
     expression = "{} = {}*{}"
     op_name = "mul"
+    _reassignable = False
 
     def __init__(self, program_index, output, inputs):
 
@@ -87,3 +89,18 @@ class Mul(edge.Edge):
     @staticmethod
     def get_cost_dict():
         return {'cannon': Mul.mul_cannon_cost, 'dot_d': Mul.mul_dot_d_cost}
+
+    @staticmethod
+    def num_implementations():
+        return 2
+
+    @staticmethod
+    def random_imp():
+        return random.choice(["cannon", "dot_d"])
+
+    class Node(edge.Edge.Node):
+        def __init__(self, mul, children):
+            self.mul = mul
+            self.num_children = self.mul.num_inputs
+            self.cannon_kid = children[0]
+            self.dot_kid = children[1]

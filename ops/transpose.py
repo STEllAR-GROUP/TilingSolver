@@ -1,12 +1,13 @@
 import edge
 
-from detail import MatrixSize
+from matrix_size import MatrixSize
 
 
 class Transpose(edge.Edge):
     num_inputs = 1
     expression = "{} = ({})^-1"
     op_name = "transpose"
+    _reassignable = False
 
     def __init__(self, program_index, output, inputs):
         super(Transpose, self).__init__(program_index, output, inputs)
@@ -41,3 +42,11 @@ class Transpose(edge.Edge):
     @staticmethod
     def get_cost_dict():
         return {'normal': Transpose.normal_cost}
+
+    @staticmethod
+    def num_implementations():
+        return 1
+
+    @staticmethod
+    def random_imp():
+        return "normal"

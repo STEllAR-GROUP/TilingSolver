@@ -8,10 +8,15 @@ from ops.transpose import Transpose
 
 
 def get_edge_types():
+    # This could be found with a sys call
+    # to look at files in the ops folder
+    # and importing them
+    # So adding an op is easier, and we don't
+    # have to maintain this list manually
     return [Add, Mul, Inv, Transpose]
 
 
-def get_arity_op_list(name):
+def get_arity_op_dict(name):
     calcs = {}
     for typ in get_edge_types():
         calcs[typ.num_inputs] = {}
@@ -19,14 +24,18 @@ def get_arity_op_list(name):
         calcs[typ.num_inputs][typ.op_name] = getattr(typ, name)
     return calcs
 
+
 def get_output_size_calculators():
-    return get_arity_op_list('output_size')
+    return get_arity_op_dict('output_size')
+
 
 def get_valid_input_lists():
-    return get_arity_op_list('valid_input_sizes')
+    return get_arity_op_dict('valid_input_sizes')
 
 
 def get_op_dict(name):
+
+    
     calcs = {}
     for typ in get_edge_types():
         calcs[typ.op_name] = getattr(typ, name)()
@@ -44,7 +53,7 @@ def get_level_sets(partial_order):
     while len(in_degrees.keys()) > 0:
         tmp = [x[0] for x in in_degrees.items() if x[1] == 0]
         neighbors = [partial_order.neighbors(y) for y in tmp]
-        # This is a set to make testing easier, mainly
+        # This is a Set to make testing easier, mainly
         sets += [set(tmp)]
         for k in tmp:
             in_degrees.pop(k)
