@@ -7,6 +7,17 @@ from edge import Edge
 from problem import Problem
 
 
+def get_sub_problem(prob, sub_hypergraph, sub_graph):
+    extra = list(nx.isolates(sub_hypergraph))
+    sub_hypergraph.remove_nodes_from(extra)
+    vars = [n for n, d in sub_hypergraph.nodes(data=True) if d['bipartite'] == 1]
+    edges = {k.edge_name: k for k in prob.edges.values() if k.edge_name in sub_graph.nodes}
+    vert = {k.var_name: k for k in prob.vertices.values() if k.var_name in vars}
+    sub_problem = Problem([], [], 1, edges=edges, vertices=vert,
+                          hypergraph=sub_hypergraph, partial_order=sub_graph)
+    return sub_problem
+
+
 def solve(prob: Problem, tau=10):
     i = 2
     i += 1
@@ -15,7 +26,7 @@ def solve(prob: Problem, tau=10):
     for component in comp:
         sub_graph = prob.partial_order.subgraph(component)
         sub_hypergraph = prob.hypergraph.subgraph(prob.ground_set | component)
-        greedy_solver(prob, sub_hypergraph, sub_graph, tau)
+        greedy_solver(get_sub_problem(prob, sub_hypergraph, sub_graph), sub_hypergraph, sub_graph, tau)
 
 
 def greedy_solver(problem, sub_hyper, sub_graph, tau):

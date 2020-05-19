@@ -11,6 +11,18 @@ class TestProblem(unittest.TestCase):
         edge_set, vertex_sizes = make_basic_edge_set()
         self.problem = Problem(edge_set, vertex_sizes, 1)
 
+    def get_sub_problem(self, edges_subset):
+        sub_graph = self.problem.partial_order.subgraph(edges_subset)
+        sub_hypergraph = self.problem.hypergraph.subgraph(self.problem.ground_set | set(edges_subset)).copy()
+        extra = list(nx.isolates(sub_hypergraph))
+        sub_hypergraph.remove_nodes_from(extra)
+        vars = [n for n, d in sub_hypergraph.nodes(data=True) if d['bipartite'] == 1]
+        edges = {k.edge_name: k for k in self.problem.edges.values() if k.edge_name in edges_subset}
+        vert = {k.var_name: k for k in self.problem.vertices.values() if k.var_name in vars}
+        second_problem = Problem([], [], 1, edges=edges, vertices=vert,
+                                 hypergraph=sub_hypergraph, partial_order=sub_graph)
+        return second_problem
+
     def test_creation(self):
         pass
 
@@ -28,15 +40,13 @@ class TestProblem(unittest.TestCase):
 
     def test_sub_problem(self):
         sub_edges = ['_begin_', 'add0', 'mul2']
-        sub_graph = self.problem.partial_order.subgraph(sub_edges)
-        sub_hypergraph = self.problem.hypergraph.subgraph(self.problem.ground_set | set(sub_edges)).copy()
-        extra = list(nx.isolates(sub_hypergraph))
-        sub_hypergraph.remove_nodes_from(extra)
-        vars = [n for n, d in sub_hypergraph.nodes(data=True) if d['bipartite'] == 1]
-        edges = {k.edge_name: k for k in self.problem.edges.values() if k.edge_name in sub_edges}
-        vert = {k.var_name: k for k in self.problem.vertices.values() if k.var_name in vars}
-        second_problem = Problem([], [], 1, edges=edges, vertices=vert,
-                                 hypergraph=sub_hypergraph, partial_order=sub_graph)
+        self.get_sub_problem(sub_edges)
+
+    def test_sub_problem_level_sets(self):
+        sub_edges = ['_begin_', 'add0', 'mul2']
+        sub_prob = self.get_sub_problem(sub_edges)
+        level_sets = detail.get_level_sets(sub_prob.partial_order)
+        self.assertEqual(level_sets, [set(['_begin_']), set(['add0', 'mul2'])])
 
 
     def test_cost(self):
