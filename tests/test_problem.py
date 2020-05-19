@@ -1,4 +1,5 @@
 import detail
+import networkx as nx
 import unittest
 
 from util_test import make_basic_edge_set
@@ -24,6 +25,19 @@ class TestProblem(unittest.TestCase):
                                                ('block', 'row'), ('col', 'block'),
                                                ('col', 'col'), ('col', 'row'),
                                                ('row', 'row')})
+
+    def test_sub_problem(self):
+        sub_edges = ['_begin_', 'add0', 'mul2']
+        sub_graph = self.problem.partial_order.subgraph(sub_edges)
+        sub_hypergraph = self.problem.hypergraph.subgraph(self.problem.ground_set | set(sub_edges)).copy()
+        extra = list(nx.isolates(sub_hypergraph))
+        sub_hypergraph.remove_nodes_from(extra)
+        vars = [n for n, d in sub_hypergraph.nodes(data=True) if d['bipartite'] == 1]
+        edges = {k.edge_name: k for k in self.problem.edges.values() if k.edge_name in sub_edges}
+        vert = {k.var_name: k for k in self.problem.vertices.values() if k.var_name in vars}
+        second_problem = Problem([], [], 1, edges=edges, vertices=vert,
+                                 hypergraph=sub_hypergraph, partial_order=sub_graph)
+
 
     def test_cost(self):
         cost = self.problem()

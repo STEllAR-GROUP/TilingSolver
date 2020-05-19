@@ -43,3 +43,6 @@ class Inv(edge.Edge):
     @staticmethod
     def random_imp():
         return "normal"
+
+    def next(self):
+        raise AttributeError("Inverse only has one implementation")

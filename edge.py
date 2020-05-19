@@ -1,7 +1,7 @@
 from matrix_size import MatrixSize
+from nextable import Nextable
 
-
-class Edge:
+class Edge(Nextable):
     """
     Class for binding together Edge (assignment and arithmetic operation)
     data in the tiling solver
@@ -24,6 +24,7 @@ class Edge:
     _reassignable = False
 
     def __init__(self, program_index, output, inputs, loop_weight=1.0):
+        super(Edge, self).__init__()
         # We only support expressions with one assigned variable for now
         self.edge_name = self.op_name+str(program_index)
         self.program_index = program_index
@@ -77,7 +78,9 @@ class Edge:
     def random_imp():
         raise NotImplementedError
 
-    class Node:
-        def __init__(self):
-            raise NotImplementedError
+    def num_iterations(self):
+        return self.num_implementations()
+
+    def next(self):
+        raise NotImplementedError
 

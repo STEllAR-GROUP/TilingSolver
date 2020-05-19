@@ -10,47 +10,7 @@ from edge import Edge
 from itertools import permutations
 from networkx.algorithms import bipartite
 from networkx import DiGraph
-
-
-class Vertex:
-    """
-    Class for binding together Vertex (variable) data in the tiling solver
-
-    INPUT:
-
-    - var_name -- A string representation of the variable's name
-
-    - size -- MatrixSize representation of the variable's (matrix or vector)
-    size
-
-    - tiling_type -- TilingType (row-major, column-major, or block)
-
-    - dist -- List of localities this Vertex is distributed across
-    In the case where data is not distributed across a proper subset of
-    available localities, (that is, when all available localities are used
-    in distributing this data structure) loc_list is simply empty
-    """
-    tiling_types = ['row', 'col', 'block']
-
-    def __init__(self, var_name, size, generation, tiling_type, dist):
-        # Add generation value to track how many times this variable changes
-        self.var_name = var_name
-        self.size = size
-        # The combination of the var_name and generation should give a
-        # globally unique identifier to the data enclosed therein.
-        # This is mainly because the generation can't be the same for
-        # two different reassignments (it might be if we genuinely parsed
-        # conditional structures) due to how the dependency graph calculation
-        # works
-        self.generation = generation
-        assert tiling_type in self.tiling_types
-        self.tiling_type = tiling_type
-        self.dist = dist
-        self.tiling_idx = self.tiling_types.index(self.tiling_type)
-
-    def next_tiling(self):
-        self.tiling_idx = (self.tiling_idx+1) % len(self.tiling_types)
-        self.tiling_type = self.tiling_types[self.tiling_idx]
+from vertex import Vertex
 
 
 class Locality:
@@ -89,12 +49,22 @@ class Problem:
     beginning distributed matrix is spread across
     """
     def __init__(self, edge_set, vertex_sizes, num_locs,
-                 initial_distribution=None):
+                 initial_distribution=None, hypergraph=None, partial_order=None, edges=None, vertices=None):
         if initial_distribution is None:
             self.even_dist = True
         else:
             self.even_dist = False
 
+        if hypergraph is not None \
+                and partial_order is not None \
+                and vertices is not None\
+                and edges is not None:
+            vertex_sizes = [[], [], [], []]
+            for i in range(1, 5):
+                vertex_sizes[i-1] = [k.var_name for k in vertices.values() if k.size == MatrixSize(i)]
+            edge_set = edges.values()
+            i = 1
+            print(i)
         assert len(edge_set) > 0
         for k in edge_set:
             assert isinstance(k, Edge), "Input data formatted incorrectly"
@@ -103,16 +73,16 @@ class Problem:
         self.edges = {edge.edge_name: edge
                       for edge in edge_set}
         self.hypergraph = nx.Graph()
-        self.init_hypergraph()
+        self.init_hypergraph(hypergraph=hypergraph)
         # Make sure the big vertex list only includes vertices in the
         # edge set
         self.ground_set = {n for n, d in self.hypergraph.nodes(data=True)
                            if d['bipartite'] == 1}
+
         assert self.ground_set == (self.ground_set | set(vertex_sizes[0] +
                                                          vertex_sizes[1] +
                                                          vertex_sizes[2] +
                                                          vertex_sizes[3]))
-
         unique_output_list = set([p.output for p in self.edges.values()])
         duplicate_outputs = {p: [] for p in unique_output_list}
         for edge in self.edges.values():
@@ -120,6 +90,17 @@ class Problem:
         for p in duplicate_outputs:
             duplicate_outputs[p] = sorted(duplicate_outputs[p])
 
+        self.partial_order = nx.DiGraph()
+        self.init_digraph(duplicate_outputs, partial_order=partial_order)
+        self.output_size_calculators = detail.get_output_size_calculators()
+        self.cost_dict = detail.get_all_cost_dicts()
+        self.vertices = {}
+        self.init_vertices(vertex_sizes, duplicate_outputs, initial_distribution, vertices)
+
+    def init_digraph(self, duplicate_outputs, partial_order=None):
+        if partial_order is not None:
+            self.partial_order = partial_order
+            return
         depends_on = {p.edge_name: set([]) for p in self.edges.values()}
         for p in self.edges.values():
             for i in p.inputs:
@@ -141,7 +122,7 @@ class Problem:
                                 break
                             idx += 1
                         if idx == len(duplicate_outputs[i]):
-                            idx = len(duplicate_outputs[i])-1
+                            idx = len(duplicate_outputs[i]) - 1
                         depends_on[p.edge_name].add(
                             duplicate_outputs[i][idx].edge_name
                         )
@@ -153,12 +134,11 @@ class Problem:
                 except KeyError:
                     depends_on[p.edge_name].add('_begin_')
         self.partial_order = nx.DiGraph(depends_on).reverse()
-        self.output_size_calculators = detail.get_output_size_calculators()
-        self.cost_dict = detail.get_all_cost_dicts()
-        self.vertices = {}
-        self.init_vertices(vertex_sizes, duplicate_outputs, initial_distribution)
 
-    def init_vertices(self, vertex_sizes, duplicate_outputs, initial_locality_distribution):
+    def init_vertices(self, vertex_sizes, duplicate_outputs, initial_locality_distribution, vertices=None):
+        if vertices is not None:
+            self.vertices = vertices
+            return
         # Initialize all of the variables in the input layer
         for i in range(len(vertex_sizes)):
             for var in vertex_sizes[i]:
@@ -194,7 +174,10 @@ class Problem:
                                                             0, 'row',
                                                             out_dist)
 
-    def init_hypergraph(self):
+    def init_hypergraph(self, hypergraph=None):
+        if hypergraph is not None:
+            self.hypergraph = hypergraph
+            return
         bipartite_edge_set = []
         for p in self.edges.values():
             for var in p.vars:
@@ -208,6 +191,7 @@ class Problem:
 
     def __call__(self, *args, **kwargs):
         return self.cost()
+    
 
     def cost(self):
         cost = 0

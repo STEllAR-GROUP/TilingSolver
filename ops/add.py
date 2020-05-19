@@ -60,8 +60,6 @@ class Add(edge.Edge):
     def random_imp():
         return "normal"
 
-    class Node(edge.Edge.Node):
-        def __init__(self, add, children):
-            self.add = add
-            self.num_children = self.add.num_inputs
-            self.child = children[0]
+    def next(self):
+        raise AttributeError("Add only has one implementation")
+

@@ -9,10 +9,12 @@ class Mul(edge.Edge):
     expression = "{} = {}*{}"
     op_name = "mul"
     _reassignable = False
+    algorithms = ['cannon', 'dot_d']
 
     def __init__(self, program_index, output, inputs):
-
         super(Mul, self).__init__(program_index, output, inputs)
+        self.algorithm_idx = 0
+        self.algorithm = self.algorithms[self.algorithm_idx]
 
     @staticmethod
     def output_size(operands):
@@ -98,9 +100,7 @@ class Mul(edge.Edge):
     def random_imp():
         return random.choice(["cannon", "dot_d"])
 
-    class Node(edge.Edge.Node):
-        def __init__(self, mul, children):
-            self.mul = mul
-            self.num_children = self.mul.num_inputs
-            self.cannon_kid = children[0]
-            self.dot_kid = children[1]
+    def next(self):
+        self.algorithm_idx = (self.algorithm_idx+1) % len(self.algorithms)
+
+

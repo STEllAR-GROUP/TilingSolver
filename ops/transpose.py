@@ -50,3 +50,6 @@ class Transpose(edge.Edge):
     @staticmethod
     def random_imp():
         return "normal"
+
+    def next(self):
+        raise AttributeError("Transpose only has one implementation")

@@ -34,8 +34,6 @@ def get_valid_input_lists():
 
 
 def get_op_dict(name):
-
-    
     calcs = {}
     for typ in get_edge_types():
         calcs[typ.op_name] = getattr(typ, name)()

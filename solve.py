@@ -21,7 +21,8 @@ def solve(prob: Problem, tau=10):
 def greedy_solver(problem, sub_hyper, sub_graph, tau):
     level_decomp = detail.get_level_sets(sub_graph)
     vars = [n for n, d in sub_hyper.nodes(data=True) if d['bipartite'] == 1]
-
+    # Need to create new Problem from our sub_hyper and sub_graph
+    # It's the only proper way to do this
     implementation_space_size = 1
     for edge in sub_graph.nodes():
         implementation_space_size *= problem.edges[edge].num_implementations()
@@ -53,10 +54,10 @@ def greedy_solver(problem, sub_hyper, sub_graph, tau):
 
 
 def exhaust(problem, sub_hyper, sub_graph):
-    vars_solution = {var_.var_name: var_ for var_ in
-                     [problem.vertices[n] for n, d in sub_hyper.nodes(data=True) if d['bipartite'] == 1]}
-
-
+    vars_solution = [problem.vertices[n] for n, d in sub_hyper.nodes(data=True)
+                     if d['bipartite'] == 1]
+    edges_solution = [problem.edges[edge_name] for edge_name in sub_graph.nodes() if edge_name != "_begin_"]
+    total_solution = vars_solution+edges_solution
 
 def greedy_solve_helper(sub_hyper, sub_graph, level_decomp, implementation_choices):
     i = 2
