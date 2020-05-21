@@ -61,16 +61,15 @@ class Problem:
                 and edges is not None:
             vertex_sizes = [[], [], [], []]
             for i in range(1, 5):
-                vertex_sizes[i-1] = [k.var_name for k in vertices.values() if k.size == MatrixSize(i)]
+                vertex_sizes[i-1] = [k.name for k in vertices.values() if k.size == MatrixSize(i)]
             edge_set = edges.values()
             i = 1
-            print(i)
         assert len(edge_set) > 0
         for k in edge_set:
             assert isinstance(k, Edge), "Input data formatted incorrectly"
 
         self.num_locs = num_locs
-        self.edges = {edge.edge_name: edge
+        self.edges = {edge.name: edge
                       for edge in edge_set}
         self.hypergraph = nx.Graph()
         self.init_hypergraph(hypergraph=hypergraph)
@@ -101,7 +100,7 @@ class Problem:
         if partial_order is not None:
             self.partial_order = partial_order
             return
-        depends_on = {p.edge_name: set([]) for p in self.edges.values()}
+        depends_on = {p.name: set([]) for p in self.edges.values()}
         for p in self.edges.values():
             for i in p.inputs:
                 try:
@@ -123,16 +122,16 @@ class Problem:
                             idx += 1
                         if idx == len(duplicate_outputs[i]):
                             idx = len(duplicate_outputs[i]) - 1
-                        depends_on[p.edge_name].add(
-                            duplicate_outputs[i][idx].edge_name
+                        depends_on[p.name].add(
+                            duplicate_outputs[i][idx].name
                         )
                     elif len(duplicate_outputs[i]) > 0:
-                        depends_on[p.edge_name].add(
-                            duplicate_outputs[i][0].edge_name)
+                        depends_on[p.name].add(
+                            duplicate_outputs[i][0].name)
                     else:
                         raise KeyError
                 except KeyError:
-                    depends_on[p.edge_name].add('_begin_')
+                    depends_on[p.name].add('_begin_')
         self.partial_order = nx.DiGraph(depends_on).reverse()
 
     def init_vertices(self, vertex_sizes, duplicate_outputs, initial_locality_distribution, vertices=None):
@@ -181,7 +180,7 @@ class Problem:
         bipartite_edge_set = []
         for p in self.edges.values():
             for var in p.vars:
-                bipartite_edge_set += [(p.edge_name, var)]
+                bipartite_edge_set += [(p.name, var)]
         blocks = [p.vars for p in self.edges.values()]
         # Flatten blocks into set
         var_names = {i for k in blocks for i in k}
@@ -212,7 +211,7 @@ class Problem:
             # TODO - Try to set up detection on lower levels for an input value which hasn't
             # been used until then
             if first:
-                assigned = {var.var_name: False for var in self.vertices.values()}
+                assigned = {var.name: False for var in self.vertices.values()}
             for edge_name in set:
                 e = self.edges[edge_name]
                 tmp_dict = cost_dict[e.op_name]
@@ -224,7 +223,7 @@ class Problem:
                 # algorithm
                 for i in range(len(algs)):
                     for j in range(len(tiling_matches)):
-                        tmp_alg_choice[e.edge_name] = algs[i]
+                        tmp_alg_choice[e.name] = algs[i]
                         try:
                             vals[i, j] = tmp_dict[algs[i]](tiling_matches[j])
                         except AssertionError:
@@ -233,11 +232,11 @@ class Problem:
                 alg_idx, tile_idx = np.unravel_index(vals.argmin(), vals.shape)
                 if first:
                     for i in range(len(e.inputs)):
-                        if not assigned[ins[i].var_name]:
+                        if not assigned[ins[i].name]:
                             ins[i].tiling_type = tiling_matches[tile_idx][i]
-                            assigned[ins[i].var_name] = True
-                    tmp_alg_choice[e.edge_name] = algs[alg_idx]
-                    tmp_tiling_choice[e.edge_name] = tiling_matches[tile_idx]
+                            assigned[ins[i].name] = True
+                    tmp_alg_choice[e.name] = algs[alg_idx]
+                    tmp_tiling_choice[e.name] = tiling_matches[tile_idx]
                     cost += val
                 else:
                     parent_tiles = tuple([var.tiling_type for var in ins])
@@ -245,14 +244,32 @@ class Problem:
                     parent_tile_compliant_vals = vals[:, parent_tile_idx]
                     parent_val = parent_tile_compliant_vals.min()
                     parent_alg_idx = parent_tile_compliant_vals.argmin()
-                    tmp_alg_choice[e.edge_name] = algs[parent_alg_idx]
-                    tmp_tiling_choice[e.edge_name] = tiling_matches[parent_tile_idx]
+                    tmp_alg_choice[e.name] = algs[parent_alg_idx]
+                    tmp_tiling_choice[e.name] = tiling_matches[parent_tile_idx]
                     if parent_val > val:
-                        recommend_retiling[e.edge_name] = True
-                        retiling_diff[e.edge_name] = val - parent_val
+                        recommend_retiling[e.name] = True
+                        retiling_diff[e.name] = val - parent_val
                     cost += parent_val
                 first = False
         return Cost(tmp_alg_choice, tmp_tiling_choice, recommend_retiling, retiling_diff, cost)
+
+    def calculate_cost(self):
+        return self.calculate_edge_subset_cost(self.edges.keys())
+
+    def calculate_edge_subset_cost(self, edge_subset):
+        sum = 0
+        for edge_name in edge_subset:
+            #print(edge)
+            edge = self.edges[edge_name]
+            cost_dict = edge.get_cost_dict()
+            func = cost_dict[edge.options[edge.idx]]
+            #print(cost_dict, func)
+            cost_matrix = func()
+            loc = np.array([self.vertices[name].idx for name in edge.vars])
+            #print(cost_matrix, loc)
+            cost = cost_matrix[tuple(loc.T)]
+            sum += edge.loop_weight*cost
+        return sum
 
     def get_output_size_calculator(self, edge):
         return self.output_size_calculators[edge.get_arity()][edge.op_name]

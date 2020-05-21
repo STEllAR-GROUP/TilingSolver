@@ -17,8 +17,8 @@ class TestProblem(unittest.TestCase):
         extra = list(nx.isolates(sub_hypergraph))
         sub_hypergraph.remove_nodes_from(extra)
         vars = [n for n, d in sub_hypergraph.nodes(data=True) if d['bipartite'] == 1]
-        edges = {k.edge_name: k for k in self.problem.edges.values() if k.edge_name in edges_subset}
-        vert = {k.var_name: k for k in self.problem.vertices.values() if k.var_name in vars}
+        edges = {edge.name: edge for edge in self.problem.edges.values() if edge.name in edges_subset}
+        vert = {var.name: var for var in self.problem.vertices.values() if var.name in vars}
         second_problem = Problem([], [], 1, edges=edges, vertices=vert,
                                  hypergraph=sub_hypergraph, partial_order=sub_graph)
         return second_problem

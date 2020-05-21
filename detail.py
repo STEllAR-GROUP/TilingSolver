@@ -1,11 +1,11 @@
 from matrix_size import MatrixSize
 import tiling
+import random
 
 from ops.add import Add
 from ops.inv import Inv
 from ops.mul import Mul
 from ops.transpose import Transpose
-
 
 def get_edge_types():
     # This could be found with a sys call
@@ -60,3 +60,4 @@ def get_level_sets(partial_order):
                 in_degrees[j] -= 1
         count += 1
     return sets
+

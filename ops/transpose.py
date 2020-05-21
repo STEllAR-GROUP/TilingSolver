@@ -1,4 +1,5 @@
 import edge
+import numpy as np
 
 from matrix_size import MatrixSize
 
@@ -8,6 +9,7 @@ class Transpose(edge.Edge):
     expression = "{} = ({})^-1"
     op_name = "transpose"
     _reassignable = False
+    options = ['normal']
 
     def __init__(self, program_index, output, inputs):
         super(Transpose, self).__init__(program_index, output, inputs)
@@ -36,8 +38,8 @@ class Transpose(edge.Edge):
                 (MatrixSize.small_small,)]
 
     @staticmethod
-    def normal_cost(operands):
-        return 0
+    def normal_cost():
+        return np.array([[5, 1, 2], [1, 5, 2], [3, 3, 1]])
 
     @staticmethod
     def get_cost_dict():
@@ -50,6 +52,3 @@ class Transpose(edge.Edge):
     @staticmethod
     def random_imp():
         return "normal"
-
-    def next(self):
-        raise AttributeError("Transpose only has one implementation")

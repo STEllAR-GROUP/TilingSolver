@@ -19,12 +19,11 @@ class Vertex(Nextable):
     available localities, (that is, when all available localities are used
     in distributing this data structure) loc_list is simply empty
     """
-    tiling_types = ['row', 'col', 'block']
+    options = ['row', 'col', 'block']
 
     def __init__(self, var_name, size, generation, tiling_type, dist):
-        super(Vertex, self).__init__()
+        super(Vertex, self).__init__(var_name)
         # Add generation value to track how many times this variable changes
-        self.var_name = var_name
         self.size = size
         # The combination of the var_name and generation should give a
         # globally unique identifier to the data enclosed therein.
@@ -33,14 +32,38 @@ class Vertex(Nextable):
         # conditional structures) due to how the dependency graph calculation
         # works
         self.generation = generation
-        assert tiling_type in self.tiling_types
-        self.tiling_type = tiling_type
+        assert tiling_type in self.options
         self.dist = dist
-        self.tiling_idx = self.tiling_types.index(self.tiling_type)
+        self.idx = self.options.index(self.tiling_type)
+        self.start_idx = self.idx
 
-    def num_iterations(self):
-        return len(self.tiling_types)
+    def next(self, nodes, my_idx=0, presence=None):
+        if presence is None:
+            presence = set()
+        if self.name not in presence:
+            next_val = (self.idx + 1) % len(self.options)
+            self.idx = next_val
+            if next_val == self.start_idx and my_idx+1 < len(nodes):
+                presence.add(self.name)
+                resp = nodes[my_idx + 1].next(nodes, my_idx + 1, presence)
+                return False | resp
+            elif next_val == self.start_idx and my_idx+1 == len(nodes):
+                return True
+        elif my_idx+1 < len(nodes):
+            return False | nodes[my_idx + 1].next(nodes, my_idx + 1, presence)
+        elif my_idx+1 == len(nodes):
+            return True
+        else:
+            return False
+        return False
 
-    def next(self):
-        self.tiling_idx = (self.tiling_idx+1) % len(self.tiling_types)
-        self.tiling_type = self.tiling_types[self.tiling_idx]
+    @property
+    def tiling_type(self):
+        return self.options[self.idx]
+
+    def __str__(self):
+        return self.name + " " + self.options[self.idx] + " " + str(self.start_idx)
+
+    def __repr__(self):
+        return self.name + " " + self.options[self.idx] + " " + str(self.start_idx)
+

@@ -1,3 +1,5 @@
+import numpy as np
+
 from matrix_size import MatrixSize
 from nextable import Nextable
 
@@ -24,9 +26,8 @@ class Edge(Nextable):
     _reassignable = False
 
     def __init__(self, program_index, output, inputs, loop_weight=1.0):
-        super(Edge, self).__init__()
+        super(Edge, self).__init__(self.op_name + str(program_index))
         # We only support expressions with one assigned variable for now
-        self.edge_name = self.op_name+str(program_index)
         self.program_index = program_index
         self.output = output
         self.inputs = inputs
@@ -58,6 +59,15 @@ class Edge(Nextable):
     def reassignable(self):
         return self._reassignable
 
+    def set_min_cost_deviance_algorithm(self):
+        costs = [dict_func() for dict_func in self.get_cost_dict().values()]
+        deviations = [mat.max()/mat.min() for mat in costs]
+        self.idx = np.argmin(deviations)
+
+    @property
+    def algorithm(self):
+        return self.options[self.idx]
+
     @staticmethod
     def output_size(operands):
         raise NotImplementedError
@@ -77,10 +87,3 @@ class Edge(Nextable):
     @staticmethod
     def random_imp():
         raise NotImplementedError
-
-    def num_iterations(self):
-        return self.num_implementations()
-
-    def next(self):
-        raise NotImplementedError
-

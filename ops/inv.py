@@ -1,4 +1,5 @@
 import edge
+import numpy as np
 
 from matrix_size import MatrixSize
 
@@ -8,9 +9,9 @@ class Inv(edge.Edge):
     expression = "{} = ({})^-1"
     op_name = "inv"
     _reassignable = False
+    options = ['normal']
 
     def __init__(self, program_index, output, inputs):
-
         super(Inv, self).__init__(program_index, output, inputs)
 
     @staticmethod
@@ -30,7 +31,7 @@ class Inv(edge.Edge):
 
     @staticmethod
     def normal_cost():
-        return 0
+        return np.array([[1, 10, 2], [6, 10, 4], [2, 3, 1]])
 
     @staticmethod
     def get_cost_dict():
@@ -43,6 +44,3 @@ class Inv(edge.Edge):
     @staticmethod
     def random_imp():
         return "normal"
-
-    def next(self):
-        raise AttributeError("Inverse only has one implementation")

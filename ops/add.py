@@ -1,4 +1,5 @@
 import edge
+import numpy as np
 
 from matrix_size import MatrixSize
 
@@ -8,6 +9,7 @@ class Add(edge.Edge):
     expression = "{} = {}+{}"
     op_name = "add"
     _reassignable = True
+    options = ['normal']
 
     def __init__(self, program_index, output, inputs):
         super(Add, self).__init__(program_index, output, inputs)
@@ -30,27 +32,14 @@ class Add(edge.Edge):
                 (MatrixSize.small_small, MatrixSize.small_small)]
 
     @staticmethod
-    def add_cost(operands):
-        assert len(operands) == 2, "Addition takes two arguments"
-        if operands[0] == 'row':
-            if operands[1] == 'row':
-                return 0
-            else:
-                return 2
-        elif operands[0] == 'col':
-            if operands[1] == 'col':
-                return 0
-            else:
-                return 2
-        else:  # operands[0].tiling_type == 'block':
-            if operands[1] == 'block':
-                return 0
-            else:
-                return 2
+    def normal_add_cost():
+        return np.array([[[1, 4, 2], [4, 4, 6], [2, 6, 2]],
+                         [[4, 4, 6], [4, 1, 2], [6, 2, 2]],
+                         [[2, 6, 2], [6, 2, 2], [2, 2, 1]]])
 
     @staticmethod
     def get_cost_dict():
-        return {'normal_add': Add.add_cost}
+        return {'normal': Add.normal_add_cost}
 
     @staticmethod
     def num_implementations():
@@ -59,7 +48,3 @@ class Add(edge.Edge):
     @staticmethod
     def random_imp():
         return "normal"
-
-    def next(self):
-        raise AttributeError("Add only has one implementation")
-

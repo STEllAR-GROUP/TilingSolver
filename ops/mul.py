@@ -1,5 +1,6 @@
 import edge
 import random
+import numpy as np
 
 from matrix_size import MatrixSize
 
@@ -9,12 +10,10 @@ class Mul(edge.Edge):
     expression = "{} = {}*{}"
     op_name = "mul"
     _reassignable = False
-    algorithms = ['cannon', 'dot_d']
+    options = ['cannon', 'dot_d']
 
     def __init__(self, program_index, output, inputs):
         super(Mul, self).__init__(program_index, output, inputs)
-        self.algorithm_idx = 0
-        self.algorithm = self.algorithms[self.algorithm_idx]
 
     @staticmethod
     def output_size(operands):
@@ -56,37 +55,20 @@ class Mul(edge.Edge):
                 (MatrixSize.small_large, MatrixSize.large_small)]
 
     @staticmethod
-    def mul_cannon_cost(operands):
-        assert len(operands) == 2, "Multiplication takes two arguments"
-        assert operands[0] == 'block', "Cannon's algorithm requires block tiling"
-        assert operands[0] == operands[1], "Cannon's algorithm requires block tiling"
-        return 0
+    def mul_cannon_cost():
+        # We want to exclude "feasibility" calculations by just
+        # adding high costs to non-feasible input tilings
+        #assert operands[0] == 'block', "Cannon's algorithm requires block tiling"
+        #assert operands[0] == operands[1], "Cannon's algorithm requires block tiling"
+        return np.array([[[10, 15, 10], [15, 15, 20], [15, 5, 3]],
+                         [[15, 10, 10], [20, 30, 10], [15, 10, 2]],
+                         [[15, 3, 6], [24, 24, 30], [12, 6, 1]]])
 
     @staticmethod
-    def mul_dot_d_cost(operands):
-        assert len(operands) == 2, "Multiplication takes two arguments"
-        lhs = operands[0]
-        rhs = operands[1]
-        if lhs == 'row':
-            if rhs == 'col':
-                return 0
-            # Not as much fetching if row-major on rhs
-            elif rhs == 'row':
-                return 3
-            else:
-                return 4
-        elif lhs == 'col':
-            if rhs == 'col' or rhs == 'block':
-                return 2
-            else:
-                return 5
-        else:  # lhs.tiling_type == 'block'
-            if rhs == 'row':
-                return 0
-            elif rhs == 'block':
-                return 3
-            else:
-                return 4
+    def mul_dot_d_cost():
+        return np.array([[[6, 1, 2], [20, 12, 14], [15, 6, 7]],
+                         [[10, 3, 6], [25, 12, 17], [24, 10, 8]],
+                         [[7, 3, 5], [24, 18, 15], [16, 10, 10]]])
 
     @staticmethod
     def get_cost_dict():
@@ -99,8 +81,3 @@ class Mul(edge.Edge):
     @staticmethod
     def random_imp():
         return random.choice(["cannon", "dot_d"])
-
-    def next(self):
-        self.algorithm_idx = (self.algorithm_idx+1) % len(self.algorithms)
-
-

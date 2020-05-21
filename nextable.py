@@ -1,18 +1,33 @@
 
 
 class Nextable:
-    def __init__(self):
-        self.i = 1
+    options = []
 
-    def num_iterations(self):
-        raise NotImplementedError
+    def __init__(self, name):
+        self.name = name
+        self.idx = 0
 
-    def next(self):
-        raise NotImplementedError
+    def next(self, nodes, my_idx=0, presence=None):
+        if presence is None:
+            presence = set()
+        if self.name not in presence:
+            next_val = (self.idx + 1) % len(self.options)
+            self.idx = next_val
+            if next_val == 0 and my_idx+1 < len(nodes):
+                presence.add(self.name)
+                return False | nodes[my_idx + 1].next(nodes, my_idx + 1, presence)
+            elif next_val == 0 and my_idx+1 == len(nodes):
+                return True
+        elif my_idx+1 < len(nodes):
+            return False | nodes[my_idx + 1].next(nodes, my_idx + 1, presence)
+        elif my_idx+1 == len(nodes):
+            return True
+        else:
+            return False
+        return False
 
-    def iterate_over_lower(self, problem, sub_problem):
-        # Basically this method allows any node (vertex or edge) to
-        # participate in the iteration over all possible solutions
-        # to the tiling problem
-        # This
-        my_idx = sub_problem.index(self)
+    def get_idx(self):
+        return self.idx
+
+    def get_option(self):
+        return self.options[self.idx]
