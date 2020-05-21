@@ -1,11 +1,9 @@
 from matrix_size import MatrixSize
-import tiling
-import random
-
 from ops.add import Add
 from ops.inv import Inv
 from ops.mul import Mul
 from ops.transpose import Transpose
+
 
 def get_edge_types():
     # This could be found with a sys call

@@ -1,15 +1,11 @@
 import detail
 import networkx as nx
 import numpy as np
-#TODO from cost_functions import get_cost_dict
-import random
 
 from cost import Cost
 from detail import MatrixSize, get_all_cost_dicts
 from edge import Edge
 from itertools import permutations
-from networkx.algorithms import bipartite
-from networkx import DiGraph
 from vertex import Vertex
 
 
@@ -63,7 +59,6 @@ class Problem:
             for i in range(1, 5):
                 vertex_sizes[i-1] = [k.name for k in vertices.values() if k.size == MatrixSize(i)]
             edge_set = edges.values()
-            i = 1
         assert len(edge_set) > 0
         for k in edge_set:
             assert isinstance(k, Edge), "Input data formatted incorrectly"
@@ -190,7 +185,6 @@ class Problem:
 
     def __call__(self, *args, **kwargs):
         return self.cost()
-    
 
     def cost(self):
         cost = 0
@@ -259,14 +253,11 @@ class Problem:
     def calculate_edge_subset_cost(self, edge_subset):
         sum = 0
         for edge_name in edge_subset:
-            #print(edge)
             edge = self.edges[edge_name]
             cost_dict = edge.get_cost_dict()
             func = cost_dict[edge.options[edge.idx]]
-            #print(cost_dict, func)
             cost_matrix = func()
             loc = np.array([self.vertices[name].idx for name in edge.vars])
-            #print(cost_matrix, loc)
             cost = cost_matrix[tuple(loc.T)]
             sum += edge.loop_weight*cost
         return sum

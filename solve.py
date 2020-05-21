@@ -1,9 +1,7 @@
 import detail
 import matplotlib.pyplot as plt
 import networkx as nx
-import numpy as np
 
-from edge import Edge
 from problem import Problem
 
 
@@ -25,7 +23,6 @@ def solve(prob: Problem, tau=10, b=2, eta=0.1):
     comp = [list(component) for component in comp]
     results = {component[0]: -1 for component in comp}
     for component in comp:
-        print(component)
         sub_graph = prob.partial_order.subgraph(component)
         sub_hypergraph = prob.hypergraph.subgraph(prob.ground_set | set(component)).copy()
         results[component[0]] = greedy_solver(get_sub_problem(prob, sub_hypergraph, sub_graph), tau, b, eta)
@@ -33,7 +30,6 @@ def solve(prob: Problem, tau=10, b=2, eta=0.1):
 
 
 def greedy_solver(problem, tau, b, eta):
-    level_decomp = detail.get_level_sets(problem.partial_order)
     vars = [n for n, d in problem.hypergraph.nodes(data=True) if d['bipartite'] == 1]
     # Need to create new Problem from our sub_hyper and sub_graph
     # It's the only proper way to do this
@@ -89,7 +85,6 @@ def greedy_solver(problem, tau, b, eta):
 
 
 def exhaust(problem, var_names, edge_names):
-    print(var_names, edge_names)
     vars_solution = [problem.vertices[var_name] for var_name in var_names]
     edges_solution = [problem.edges[edge_name] for edge_name in edge_names]
     total_solution = vars_solution+edges_solution
@@ -171,5 +166,3 @@ def compute_greedy_order(problem, edges_prime, decided_tiling, b, eta):
             return edges_double_prime
         i += 1
     return edges_double_prime
-
-

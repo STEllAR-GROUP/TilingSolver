@@ -1,15 +1,7 @@
-import edge
-import itertools
-import matplotlib.pyplot as plt
-import networkx as nx
-import random
 import sys
 import unittest
 
-from detail import get_edge_types, get_level_sets, get_valid_input_lists, get_output_size_calculators
-from edge import Edge
-from matrix_size import MatrixSize
-from problem import Problem
+from detail import get_level_sets
 from util_test import generate_random_problem, generate_entire_program
 
 
@@ -26,8 +18,6 @@ class TestRandomPrograms(unittest.TestCase):
         #nx.draw(problem.partial_order)
         #plt.show()
         print(list(problem.partial_order.edges))
-        #print((nx.connected_components(problem.partial_order)))
-
 
 
 if __name__ == '__main__':

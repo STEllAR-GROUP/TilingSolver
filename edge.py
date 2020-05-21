@@ -1,7 +1,7 @@
 import numpy as np
 
-from matrix_size import MatrixSize
 from nextable import Nextable
+
 
 class Edge(Nextable):
     """

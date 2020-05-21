@@ -58,7 +58,6 @@ def find_valid_algorithms_and_inputs(vertex_sizes):
             if len(options_tmp) > 0:
                 options[i][j] = options_tmp
                 return_ += [(i, types[j], tuple(a)) for a in options_tmp]
-    options = {i: options[i] for i in options if len(options[i]) > 0}
     return return_
 
 
@@ -100,8 +99,6 @@ def generate_random_problem(my_seed):
         new_var_names = []
         new_sizes = [[], [], [], []]
         while expression_layer_size > 0:
-            inputs = []
-            available_var_set = all_vars.copy()
             valid_algorithms_and_args = find_valid_algorithms_and_inputs(vertex_sizes)
             if len(use_all_inputs) > 0:
                 elem = random.choice(use_all_inputs)
@@ -135,7 +132,7 @@ def generate_random_problem(my_seed):
             vertex_sizes[k] += new_sizes[k]
         all_vars += new_var_names
         prev_layer_added = new_var_names
-    print("Rand prog", edge_set, new_var_name)
+    #print("Rand prog", edge_set, new_var_name)
     return Problem(edge_set, beginning_vertex_sizes, 1), main_inputs
 
 
@@ -152,10 +149,7 @@ def generate_entire_program(inputs, problem):
         program += (str(i)+" = np.random("+str(row_dim)+", "+str(col_dim)+")\n")
     for i in get_level_sets(problem.partial_order)[1:]:
         while len(i) > 0:
-            #print(i)
             elem = random.choice(list(i))
             i.remove(elem)
             program += (str(problem.edges[elem])+'\n')
     return program
-
-
