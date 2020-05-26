@@ -100,7 +100,7 @@ class Problem:
             for i in p.inputs:
                 try:
                     # If a variable is never redeclared, this is easy
-                    if len(duplicate_outputs[i]) > 1:
+                    if len(duplicate_outputs[p.output]) > 1 and p.output == i:
                         # Find in the duplicate outputs the one that has program index less than
                         # i, but is the maximal one where that condition holds
                         # We want to ensure we allow redeclaration for this op
@@ -208,9 +208,9 @@ class Problem:
                 assigned = {var.name: False for var in self.vertices.values()}
             for edge_name in set:
                 e = self.edges[edge_name]
-                tmp_dict = cost_dict[e.op_name]
+                tmp_dict = e.get_cost_dict()
                 algs = list(tmp_dict.keys())
-                ins = [self.vertices[x] for x in e.inputs.copy()]
+                ins = [self.vertices[x] for x in e.inputs]
                 tiling_matches = self.get_tiling_tuples(len(ins))
                 vals = np.zeros((len(algs), len(tiling_matches)))
                 # TODO - This should be an actual look-up table for each
@@ -221,6 +221,7 @@ class Problem:
                         try:
                             vals[i, j] = tmp_dict[algs[i]](tiling_matches[j])
                         except AssertionError:
+                            #print(tmp_dict[algs[i]])
                             vals[i, j] = 9999999999
                 val = vals.min()
                 alg_idx, tile_idx = np.unravel_index(vals.argmin(), vals.shape)

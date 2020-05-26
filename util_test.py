@@ -21,6 +21,30 @@ def make_basic_edge_set():
     return edge_set, vertex_sizes
 
 
+def make_three_level_edge_set():
+    edge_set = {Mul(0, 'd', ['b', 'a']),
+                Add(1, 'e', ['d', 'c']),
+                Mul(2, 'f', ['e', 'b']),
+                Transpose(3, 'g', ['f'])}
+    # [l_l, l_s, s_l, s_s]
+    vertex_sizes = [['c'], ['b'], ['a'], []]
+    return edge_set, vertex_sizes
+
+
+def make_multi_component_edge_set():
+    edge_set = {Mul(0, 'd', ['b', 'a']),
+                Add(2, 'e', ['d', 'c']),
+                Mul(4, 'f', ['e', 'b']),
+                Transpose(6, 'g', ['f']),
+                Add(1, 'dd', ['bb', 'aa']),
+                Mul(3, 'ee', ['dd', 'cc']),
+                Add(5, 'ee', ['ee', 'bb']),
+                Transpose(7, 'gg', ['ee'])}
+    # [l_l, l_s, s_l, s_s]
+    vertex_sizes = [['c'], ['b', 'aa', 'bb'], ['a'], ['cc']]
+    return edge_set, vertex_sizes
+
+
 def find_output_size(vertex_sizes, op, inputs):
     operands = []
     for i in inputs:
@@ -71,17 +95,19 @@ def generate_input_var_sizes(input_var_names):
     return vertex_sizes
 
 
-def generate_random_problem(my_seed):
+def generate_random_problem(my_seed, num_expressions=None, num_input_vars=None):
     if my_seed is None:
         my_seed = random.randint(0, 100)
     random.seed(my_seed)
     print("Seed is {0}".format(my_seed))
     exp_idx_tracker = {i.op_name: 0 for i in get_edge_types()}
-    num_input_vars = random.randint(1, 8)
+    if num_input_vars is None:
+        num_input_vars = random.randint(1, 8)
 
     # This max(x , y) is to ensure that there is enough
     # space to use all input variables in at least one expression
-    num_expressions = max(num_input_vars, random.randint(7, 20))
+    if num_expressions is None:
+        num_expressions = max(num_input_vars, random.randint(7, 20))
     input_var_names = list(range(num_input_vars))
     input_var_names = [chr(97+i) for i in input_var_names]
     main_inputs = input_var_names
@@ -137,6 +163,8 @@ def generate_random_problem(my_seed):
 
 
 def generate_entire_program(inputs, problem):
+    # TODO add some functionality for obtaining
+    # level sets of variables from the edge graph
     small_dim = 100
     large_dim = 3000
     dimension_map = {MatrixSize.small_small: (small_dim, small_dim),

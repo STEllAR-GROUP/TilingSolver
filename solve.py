@@ -1,6 +1,7 @@
 import detail
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 
 from problem import Problem
 
@@ -17,19 +18,32 @@ def get_sub_problem(prob, sub_hypergraph, sub_graph):
     return sub_problem
 
 
-def solve(prob: Problem, tau=10, b=2, eta=0.1):
-    components = nx.weakly_connected_components(prob.partial_order)
+def trivial_solve(prob: Problem):
+    prob = trivial_init(prob)
+    cost = prob.calculate_cost()
+    vars_solution = list(prob.vertices.values())
+    algorithm_choices = list(prob.edges.values())
+    total_solution = vars_solution + algorithm_choices
+    solution_map = {point.name: point.get_option() for point in total_solution}
+    return cost, solution_map
+
+
+def solve(prob: Problem, tau=10, tau_prime=20, b=2, eta=0.1):
+    graph = prob.partial_order.copy()
+    graph.remove_node('_begin_')
+    components = nx.weakly_connected_components(graph)
     comp = list(components)
     comp = [list(component) for component in comp]
     results = {component[0]: -1 for component in comp}
+    print("Num. of Components: ", len(comp))
     for component in comp:
-        sub_graph = prob.partial_order.subgraph(component)
+        sub_graph = prob.partial_order.subgraph(list(set(component) | {'_begin_'}))
         sub_hypergraph = prob.hypergraph.subgraph(prob.ground_set | set(component)).copy()
-        results[component[0]] = greedy_solver(get_sub_problem(prob, sub_hypergraph, sub_graph), tau, b, eta)
+        results[component[0]] = greedy_solver(get_sub_problem(prob, sub_hypergraph, sub_graph), tau, tau_prime, b, eta)
     return results
 
 
-def greedy_solver(problem, tau, b, eta):
+def greedy_solver(problem, tau_s, tau_imp, b, eta):
     vars = [n for n, d in problem.hypergraph.nodes(data=True) if d['bipartite'] == 1]
     # Need to create new Problem from our sub_hyper and sub_graph
     # It's the only proper way to do this
@@ -39,7 +53,7 @@ def greedy_solver(problem, tau, b, eta):
 
     tiling_space_size = 3**len(vars)
 
-    if implementation_space_size*tiling_space_size <= tau:
+    if implementation_space_size*tiling_space_size <= tau_s:
         print("Exhaustive search")
         vars_solution = [n for n, d in problem.hypergraph.nodes(data=True)
                          if d['bipartite'] == 1]
@@ -49,7 +63,8 @@ def greedy_solver(problem, tau, b, eta):
         print("S too big for exhaustive search at: ", implementation_space_size*tiling_space_size, " = ", implementation_space_size, "*", tiling_space_size)
         print("Number of vars: ", len(vars))
 
-    if implementation_space_size <= tau:
+    if implementation_space_size <= tau_imp:
+        print("Exhaustive search over implementation space")
         vars_solution = [problem.vertices[n] for n, d in problem.hypergraph.nodes(data=True)
                          if d['bipartite'] == 1]
         algorithm_choices = [problem.edges[edge_name] for edge_name in problem.edges]
@@ -67,8 +82,9 @@ def greedy_solver(problem, tau, b, eta):
             if tmp_cost < best_cost:
                 best_cost = tmp_cost
                 best_solution = {point.name: point.get_option() for point in total_solution}
-                print("Reassignment: ", count, best_cost, best_solution)
+                print("Reassignment upper level: ", count, best_cost, best_solution)
             count += 1
+        print("Best cost: ", best_cost)
         return best_cost, best_solution
     else:
         print("Minimum cost deviation method")
@@ -82,6 +98,49 @@ def greedy_solver(problem, tau, b, eta):
         total_solution = vars_solution + algorithm_choices
         solution_map = {point.name: point.get_option() for point in total_solution}
         return problem.calculate_cost(), solution_map
+
+
+def trivial_init(problem):
+    assigned = {var_name: False for var_name in problem.vertices}
+    for level_set in detail.get_level_sets(problem.partial_order)[1:]:
+        print("Set: ", level_set)
+        for edge_name in level_set:
+            edge = problem.edges[edge_name]
+            cost_dict = edge.get_cost_dict()
+            min_cost = 99999999999999
+            local_vars = [problem.vertices[var_name] for var_name in edge.vars]
+            for alg in edge.options:
+                cost_table = cost_dict[alg]()
+                # There is no real protection here from reassigning
+                # variable's tiling, outside of that variable's name
+                # being present in assigned, we might want to add some
+                # extra protection for that
+                choices = [var.idx if assigned[var.name] else None for var in local_vars]
+                #print("Choices: ", choices)
+                reduction = 0
+                for i in range(len(choices)):
+                    if choices[i] is not None:
+                        cost_table = cost_table.take(indices=choices[i], axis=i-reduction)
+                        reduction += 1
+
+                if not isinstance(cost_table, np.ndarray):
+                    tmp_cost = cost_table
+                else:
+                    tmp_cost = cost_table.min()
+
+                if tmp_cost < min_cost:
+                    min_cost = tmp_cost
+                    min_loc = np.unravel_index(cost_table.argmin(), cost_table.shape)
+                    edge.set_idx_with_val(alg)
+                    count = 0
+                    for i in range(len(choices)):
+                        if choices[i] is None:
+                            local_vars[i].idx = min_loc[count]
+                            count += 1
+                    #print("Reassignment: ", local_vars, min_loc)
+            for var_name in edge.vars:
+                assigned[var_name] = True
+    return problem
 
 
 def exhaust(problem, var_names, edge_names):
@@ -99,9 +158,11 @@ def exhaust(problem, var_names, edge_names):
         if tmp_cost < best_cost:
             best_cost = tmp_cost
             best_solution = {point.name: point.get_option() for point in total_solution}
-            print("Reassignment: ", count, best_cost, best_solution)
+            print("Exhaust Reassignment: ", count, best_cost, best_solution)
         count += 1
     print("Total iterations: ", count)
+    for point in total_solution:
+        point.set_idx_with_val(best_solution[point.name])
     return best_cost, best_solution
 
 
@@ -133,6 +194,8 @@ def get_edge_min_cost(problem, edge_name, decided_tiling):
             finished = var_set[0].next(var_set)
             tmp_cost = problem.calculate_edge_subset_cost([edge.name])
             tmp_min = min(tmp_min, tmp_cost)
+    else:
+        return min(tmp_min, problem.calculate_edge_subset_cost([edge.name]))
     return tmp_min
 
 
@@ -157,11 +220,13 @@ def compute_greedy_order(problem, edges_prime, decided_tiling, b, eta):
                                + sum_descendants(problem, edge_name, gamma)
     assert len(gamma) == len(edges_prime), "Something went wrong with compute greedy order"
     i = 0
-    sorted_eps = sorted(list(gamma.items()))
+    sorted_eps = list(gamma.items())
+    sorted_eps = [(elem[1], elem[0]) for elem in sorted_eps]
+    sorted_eps.sort(reverse=True)
     edges_double_prime = set()
     while len(edges_double_prime) <= b and i < len(sorted_eps):
-        if sorted_eps[i][1] >= eta*sorted_eps[0][1]:
-            edges_double_prime.add(sorted_eps[i][0])
+        if sorted_eps[i][0] >= eta*sorted_eps[0][0]:
+            edges_double_prime.add(sorted_eps[i][1])
         else:
             return edges_double_prime
         i += 1

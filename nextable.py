@@ -31,3 +31,7 @@ class Nextable:
 
     def get_option(self):
         return self.options[self.idx]
+
+    def set_idx_with_val(self, val):
+        idx = self.options.index(val)
+        self.idx = idx
