@@ -22,7 +22,23 @@ In the first example here, it is not.
 </p>
 
 In the second example, it is. Broadly speaking, the goal of the TilingSolver is to,
-after analyzing a program, choose a set of tilings which is optimal for communication
-costs
+after analyzing a program, choose a set of tilings and algorithms which is optimal
+for communication costs. 
 
+This set of tilings and algorithms is discovered in one of three main ways
+(with another trivial implementation as well).
 
+1. We iterate exhaustively through all possibilities, and calculate the cost
+of each option, choosing the one with the lowest cost.
+
+2. We iterate through all possibilities for algorithms, choosing the set of
+algorithms which we can find the best solution for using a non-exhaustive greedy
+search
+
+3. We choose the algorithms with the tightest performance bounds, and the tilings
+obtained from the same non-exhaustive greedy search used in option #2
+
+We expect the viability of each of these 3 options to change as the number of 
+variables and operations increase, so that the options with higher number become
+preferable as the number of involved variables and operations increase. This is due
+to each one's asymptotic complexity. 
