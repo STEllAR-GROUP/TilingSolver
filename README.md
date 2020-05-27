@@ -7,4 +7,4 @@ matrix applications, specifically with an eye for applications in the Phylanx
 By tiling we mean the decisions regarding how to distribute data across some
 number of computational nodes, for example, in a cluster or supercomputer.
 
-<img src="images/matrix_add_all_partitioned.png" width="100">
+<img src="images/matrix_add_all_partitioned.png" width="400">
