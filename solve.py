@@ -104,7 +104,10 @@ def trivial_init(problem):
     assigned = {var_name: False for var_name in problem.vertices}
     for level_set in detail.get_level_sets(problem.partial_order)[1:]:
         print("Set: ", level_set)
-        for edge_name in level_set:
+        level_set_sortable = [(problem.edges[edge_name].program_index, edge_name) for edge_name in level_set]
+        level_set_sortable.sort()
+        #print(level_set_sortable)
+        for index, edge_name in level_set_sortable:
             edge = problem.edges[edge_name]
             cost_dict = edge.get_cost_dict()
             min_cost = 99999999999999
@@ -137,6 +140,7 @@ def trivial_init(problem):
                         if choices[i] is None:
                             local_vars[i].idx = min_loc[count]
                             count += 1
+                    #print("Local vars: ", local_vars)
                     #print("Reassignment: ", local_vars, min_loc)
             for var_name in edge.vars:
                 assigned[var_name] = True

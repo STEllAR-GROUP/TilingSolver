@@ -34,8 +34,8 @@ class Add(edge.Edge):
     @staticmethod
     def normal_add_cost():
         return np.array([[[1, 4, 2], [4, 4, 6], [2, 6, 2]],
-                         [[4, 4, 6], [4, 1, 2], [6, 2, 2]],
-                         [[2, 6, 2], [6, 2, 2], [2, 2, 1]]])
+                         [[4, 4, 6], [4, 1.1, 2], [6, 2, 2]],
+                         [[2, 6, 2], [6, 2, 2], [2, 2, 1.1]]])
 
     @staticmethod
     def get_cost_dict():

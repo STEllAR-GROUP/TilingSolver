@@ -21,29 +21,46 @@ class TestSolver(unittest.TestCase):
         print("-----------------------------")
         print("Result: ", result)
         print("-----------------------------")
+        return result
 
     def run_basic_problem(self, tau=10, tau_prime=20, b=2, eta=0.1,
                           trivial=False):
         problem = Problem(*make_basic_edge_set(), 1)
-        self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
+        return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
 
     def run_three_level_problem(self, tau=10, tau_prime=20, b=2, eta=0.1,
                           trivial=False):
         problem = Problem(*make_three_level_edge_set(), 1)
-        self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
+        return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
 
     def run_two_comp_problem(self, tau=10, tau_prime=20, b=2, eta=0.1, trivial=False):
         problem = Problem(*make_multi_component_edge_set(), 1)
-        self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
+        return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
 
     def run_random_problem(self, seed=None, tau=10, tau_prime=20,
                            b=2, eta=0.1, num_expressions=None, num_input_vars=None, trivial=False):
         problem, inputs = generate_random_problem(seed, num_expressions=num_expressions, num_input_vars=num_input_vars)
-        self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
+        result = self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
         print(generate_entire_program(inputs, problem))
+        return result
 
     def test_trivial_solve(self):
-        self.run_basic_problem(trivial=True)
+        self.assertEqual(self.run_basic_problem(trivial=True),
+                         (5.0,
+                          {'a': 'row',
+                           'add0': 'normal',
+                           'add1': 'normal',
+                           'add3': 'normal',
+                           'b': 'row',
+                           'c': 'col',
+                           'd': 'row',
+                           'e': 'row',
+                           'f': 'row',
+                           'g': 'row',
+                           'h': 'row',
+                           'i': 'row',
+                           'mul2': 'dot_d',
+                           'mul4': 'dot_d'}))
 
     def test_solve_implementation_search(self):
         self.run_basic_problem()
@@ -56,7 +73,20 @@ class TestSolver(unittest.TestCase):
         self.run_basic_problem(tau_prime=2)
 
     def test_trivial_three_solve(self):
-        self.run_three_level_problem(trivial=True)
+        self.assertEqual(self.run_three_level_problem(trivial=True),
+                         (4.0,
+                          {'a': 'block',
+                           'add1': 'normal',
+                           'b': 'block',
+                           'c': 'block',
+                           'd': 'block',
+                           'e': 'block',
+                           'f': 'block',
+                           'g': 'block',
+                           'mul0': 'cannon',
+                           'mul2': 'cannon',
+                           'transpose3': 'normal'})
+                         )
 
     def test_three_solve_implementation_search(self):
         self.run_three_level_problem()

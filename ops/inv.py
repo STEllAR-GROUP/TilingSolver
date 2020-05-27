@@ -31,7 +31,7 @@ class Inv(edge.Edge):
 
     @staticmethod
     def normal_cost():
-        return np.array([[1, 10, 2], [6, 10, 4], [2, 3, 1]])
+        return np.array([[1, 10, 2], [6, 10, 4], [2, 3, 1.1]])
 
     @staticmethod
     def get_cost_dict():

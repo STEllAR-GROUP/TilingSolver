@@ -39,7 +39,7 @@ class Transpose(edge.Edge):
 
     @staticmethod
     def normal_cost():
-        return np.array([[5, 1, 2], [1, 5, 2], [3, 3, 1]])
+        return np.array([[5, 1, 2], [1.1, 5, 2], [3, 3, 1.1]])
 
     @staticmethod
     def get_cost_dict():

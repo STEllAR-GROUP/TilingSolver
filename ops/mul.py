@@ -62,7 +62,7 @@ class Mul(edge.Edge):
         #assert operands[0] == operands[1], "Cannon's algorithm requires block tiling"
         return np.array([[[10, 15, 10], [15, 15, 20], [15, 5, 3]],
                          [[15, 10, 10], [20, 30, 10], [15, 10, 2]],
-                         [[15, 3, 6], [24, 24, 30], [12, 6, 1]]])
+                         [[15, 3, 6], [24, 24, 30], [12, 6, 0.9]]])
 
     @staticmethod
     def mul_dot_d_cost():
