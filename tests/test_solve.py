@@ -25,16 +25,16 @@ class TestSolver(unittest.TestCase):
 
     def run_basic_problem(self, tau=10, tau_prime=20, b=2, eta=0.1,
                           trivial=False):
-        problem = Problem(*make_basic_edge_set(), 1)
+        problem = Problem(*make_basic_edge_set())
         return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
 
     def run_three_level_problem(self, tau=10, tau_prime=20, b=2, eta=0.1,
                           trivial=False):
-        problem = Problem(*make_three_level_edge_set(), 1)
+        problem = Problem(*make_three_level_edge_set())
         return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
 
     def run_two_comp_problem(self, tau=10, tau_prime=20, b=2, eta=0.1, trivial=False):
-        problem = Problem(*make_multi_component_edge_set(), 1)
+        problem = Problem(*make_multi_component_edge_set())
         return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
 
     def run_random_problem(self, seed=None, tau=10, tau_prime=20,
@@ -89,13 +89,55 @@ class TestSolver(unittest.TestCase):
                          )
 
     def test_three_solve_implementation_search(self):
-        self.run_three_level_problem()
+        # Verified by hand, but if the cost tables change
+        # so might this solution
+        result = self.run_three_level_problem()
+        self.assertEqual(result[list(result.keys())[0]],
+                         (4.0,
+                          {'a': 'block',
+                           'add1': 'normal',
+                           'b': 'block',
+                           'c': 'block',
+                           'd': 'block',
+                           'e': 'block',
+                           'f': 'block',
+                           'g': 'block',
+                           'mul0': 'cannon',
+                           'mul2': 'cannon',
+                           'transpose3': 'normal'}))
 
     def test_three_solve_exhaustive(self):
-        self.run_three_level_problem(tau=90000)
+        result = self.run_three_level_problem(tau=90000)
+        self.assertEqual(result[list(result.keys())[0]],
+                         (4.0,
+                          {'a': 'block',
+                           'add1': 'normal',
+                           'b': 'block',
+                           'c': 'block',
+                           'd': 'block',
+                           'e': 'block',
+                           'f': 'block',
+                           'g': 'block',
+                           'mul0': 'cannon',
+                           'mul2': 'cannon',
+                           'transpose3': 'normal'}))
 
     def test_three_solve_min_deviance(self):
-        self.run_three_level_problem(tau_prime=2)
+        # Also hand-verified
+        result = self.run_three_level_problem(tau_prime=2)
+        self.assertEqual(result[list(result.keys())[0]],
+                         (9.1,
+                          {'a': 'col',
+                           'add1': 'normal',
+                           'b': 'row',
+                           'c': 'row',
+                           'd': 'row',
+                           'e': 'row',
+                           'f': 'row',
+                           'g': 'col',
+                           'mul0': 'dot_d',
+                           'mul2': 'dot_d',
+                           'transpose3': 'normal'}))
 
     def test_two_comp_trivial(self):
         self.run_two_comp_problem(trivial=True)
@@ -106,7 +148,7 @@ class TestSolver(unittest.TestCase):
     def test_two_comp_exhaustive(self):
         self.run_two_comp_problem(tau=600000)
 
-    def test_two_com_min_deviance(self):
+    def test_two_comp_min_deviance(self):
         self.run_two_comp_problem(tau_prime=2)
 
     def test_bigger_program_min_deviance(self):

@@ -31,14 +31,17 @@ def trivial_solve(prob: Problem):
 def solve(prob: Problem, tau=10, tau_prime=20, b=2, eta=0.1):
     graph = prob.partial_order.copy()
     graph.remove_node('_begin_')
+    comps = nx.connected_components(prob.hypergraph)
     components = nx.weakly_connected_components(graph)
     comp = list(components)
-    comp = [list(component) for component in comp]
+    comp = [list(component) for component in comps]
     results = {component[0]: -1 for component in comp}
     print("Num. of Components: ", len(comp))
     for component in comp:
-        sub_graph = prob.partial_order.subgraph(list(set(component) | {'_begin_'}))
+        sub_graph = prob.partial_order.subgraph(list(set(component) | {'_begin_'})).copy()
         sub_hypergraph = prob.hypergraph.subgraph(prob.ground_set | set(component)).copy()
+        isolates = list(nx.isolates(sub_hypergraph))
+        sub_hypergraph.remove_nodes_from(isolates)
         results[component[0]] = greedy_solver(get_sub_problem(prob, sub_hypergraph, sub_graph), tau, tau_prime, b, eta)
     return results
 
@@ -103,7 +106,6 @@ def greedy_solver(problem, tau_s, tau_imp, b, eta):
 def trivial_init(problem):
     assigned = {var_name: False for var_name in problem.vertices}
     for level_set in detail.get_level_sets(problem.partial_order)[1:]:
-        print("Set: ", level_set)
         level_set_sortable = [(problem.edges[edge_name].program_index, edge_name) for edge_name in level_set]
         level_set_sortable.sort()
         #print(level_set_sortable)
@@ -177,11 +179,14 @@ def greedy_solve_helper(problem, b, eta):
     while len(decided_tiling) < num_vars:
         edge_bucket = compute_greedy_order(problem, edges_prime, decided_tiling, b, eta)
         t_prime = set()
+        print(edge_bucket)
         for edge_name in edge_bucket:
             for var_name in problem.edges[edge_name].vars:
                 if var_name not in decided_tiling:
                     t_prime.add(var_name)
+        print(t_prime)
         exhaust(problem, t_prime, [])
+        print(decided_tiling, problem.calculate_cost())
         decided_tiling = decided_tiling | t_prime
         edges_prime -= edge_bucket
     return problem
@@ -195,6 +200,9 @@ def get_edge_min_cost(problem, edge_name, decided_tiling):
 
     if len(var_set) > 0:
         while not finished:
+            # We could use the cost table, and do an argmin op
+            # but this is more resilient to how we get those costs
+            # For example, if we change to an actual cost function
             finished = var_set[0].next(var_set)
             tmp_cost = problem.calculate_edge_subset_cost([edge.name])
             tmp_min = min(tmp_min, tmp_cost)
@@ -228,7 +236,7 @@ def compute_greedy_order(problem, edges_prime, decided_tiling, b, eta):
     sorted_eps = [(elem[1], elem[0]) for elem in sorted_eps]
     sorted_eps.sort(reverse=True)
     edges_double_prime = set()
-    while len(edges_double_prime) <= b and i < len(sorted_eps):
+    while len(edges_double_prime) < b and i < len(sorted_eps):
         if sorted_eps[i][0] >= eta*sorted_eps[0][0]:
             edges_double_prime.add(sorted_eps[i][1])
         else:

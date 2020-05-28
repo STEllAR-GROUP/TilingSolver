@@ -6,7 +6,7 @@ from matrix_size import MatrixSize
 
 class Transpose(edge.Edge):
     num_inputs = 1
-    expression = "{} = ({})^-1"
+    expression = "{} = ({}).T"
     op_name = "transpose"
     _reassignable = False
     options = ['normal']

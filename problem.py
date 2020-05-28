@@ -2,8 +2,7 @@ import detail
 import networkx as nx
 import numpy as np
 
-from cost import Cost
-from detail import MatrixSize, get_all_cost_dicts
+from detail import MatrixSize, get_all_cost_dicts, EdgeSpace
 from edge import Edge
 from itertools import permutations
 from vertex import Vertex
@@ -40,12 +39,14 @@ class Problem:
     The tuple is structured as (big_big, big_small, small_big, small_small)
 
     - num_locs -- Number of localities to be used in computation
+    for use when initial_distribution, or Locality will be used.
 
     - (Optional) initial_distribution -- Dictionary for sets of localities each
     beginning distributed matrix is spread across
     """
-    def __init__(self, edge_set, vertex_sizes, num_locs,
+    def __init__(self, edge_set, vertex_sizes, num_locs=1,
                  initial_distribution=None, hypergraph=None, partial_order=None, edges=None, vertices=None):
+        self.edgespace = EdgeSpace()
         if initial_distribution is None:
             self.even_dist = True
         else:
@@ -184,75 +185,13 @@ class Problem:
         self.hypergraph.add_edges_from(bipartite_edge_set)
 
     def __call__(self, *args, **kwargs):
-        return self.cost()
-
-    def cost(self):
-        cost = 0
-        cost_dict = get_all_cost_dicts()
-        tmp_alg_choice = {}
-        tmp_tiling_choice = {}
-        recommend_retiling = {e: False for e in self.edges}
-        retiling_diff = {e: 999 for e in self.edges}
-        # TODO - Make this progress through level sets, choose
-        # options optimally from the first, then impose tiling changes later
-        level_sets = detail.get_level_sets(self.partial_order)
-
-        first = True
-        for set in level_sets[1:]:
-            # What we might want to do is sort by operation type, so that, for example,
-            # multiplication operations get first dibs on calling tiling for input matrices
-            # ^^^ TODO ^^^
-            # TODO - Try to set up detection on lower levels for an input value which hasn't
-            # been used until then
-            if first:
-                assigned = {var.name: False for var in self.vertices.values()}
-            for edge_name in set:
-                e = self.edges[edge_name]
-                tmp_dict = e.get_cost_dict()
-                algs = list(tmp_dict.keys())
-                ins = [self.vertices[x] for x in e.inputs]
-                tiling_matches = self.get_tiling_tuples(len(ins))
-                vals = np.zeros((len(algs), len(tiling_matches)))
-                # TODO - This should be an actual look-up table for each
-                # algorithm
-                for i in range(len(algs)):
-                    for j in range(len(tiling_matches)):
-                        tmp_alg_choice[e.name] = algs[i]
-                        try:
-                            vals[i, j] = tmp_dict[algs[i]](tiling_matches[j])
-                        except AssertionError:
-                            #print(tmp_dict[algs[i]])
-                            vals[i, j] = 9999999999
-                val = vals.min()
-                alg_idx, tile_idx = np.unravel_index(vals.argmin(), vals.shape)
-                if first:
-                    for i in range(len(e.inputs)):
-                        if not assigned[ins[i].name]:
-                            ins[i].tiling_type = tiling_matches[tile_idx][i]
-                            assigned[ins[i].name] = True
-                    tmp_alg_choice[e.name] = algs[alg_idx]
-                    tmp_tiling_choice[e.name] = tiling_matches[tile_idx]
-                    cost += val
-                else:
-                    parent_tiles = tuple([var.tiling_type for var in ins])
-                    parent_tile_idx = tiling_matches.index(parent_tiles)
-                    parent_tile_compliant_vals = vals[:, parent_tile_idx]
-                    parent_val = parent_tile_compliant_vals.min()
-                    parent_alg_idx = parent_tile_compliant_vals.argmin()
-                    tmp_alg_choice[e.name] = algs[parent_alg_idx]
-                    tmp_tiling_choice[e.name] = tiling_matches[parent_tile_idx]
-                    if parent_val > val:
-                        recommend_retiling[e.name] = True
-                        retiling_diff[e.name] = val - parent_val
-                    cost += parent_val
-                first = False
-        return Cost(tmp_alg_choice, tmp_tiling_choice, recommend_retiling, retiling_diff, cost)
+        return self.calculate_cost()
 
     def calculate_cost(self):
         return self.calculate_edge_subset_cost(self.edges.keys())
 
     def calculate_edge_subset_cost(self, edge_subset):
-        sum = 0
+        tmp_sum = 0
         for edge_name in edge_subset:
             edge = self.edges[edge_name]
             cost_dict = edge.get_cost_dict()
@@ -260,8 +199,8 @@ class Problem:
             cost_matrix = func()
             loc = np.array([self.vertices[name].idx for name in edge.vars])
             cost = cost_matrix[tuple(loc.T)]
-            sum += edge.loop_weight*cost
-        return sum
+            tmp_sum += edge.loop_weight*cost
+        return tmp_sum
 
     def get_output_size_calculator(self, edge):
         return self.output_size_calculators[edge.get_arity()][edge.op_name]

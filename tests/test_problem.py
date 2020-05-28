@@ -9,7 +9,7 @@ from problem import Problem
 class TestProblem(unittest.TestCase):
     def setUp(self):
         edge_set, vertex_sizes = make_basic_edge_set()
-        self.problem = Problem(edge_set, vertex_sizes, 1)
+        self.problem = Problem(edge_set, vertex_sizes)
 
     def get_sub_problem(self, edges_subset):
         sub_graph = self.problem.partial_order.subgraph(edges_subset)

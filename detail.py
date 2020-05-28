@@ -1,3 +1,7 @@
+import ops
+import os
+
+
 from matrix_size import MatrixSize
 from ops.add import Add
 from ops.inv import Inv
@@ -5,12 +9,21 @@ from ops.mul import Mul
 from ops.transpose import Transpose
 
 
+class EdgeSpace:
+    def __init__(self):
+        # This may be unnecessarily complex, because it's not a static
+        # data fetch, so the commented line at the bottom may be preferable
+        filenames = next(os.walk('ops'))[2]
+        for name in filenames:
+            assert '.py' in name
+        file_things = [name[:-3] for name in filenames]
+        capitalize_first = [name[0].upper() + name[1:] for name in file_things]
+        self.edge_types = [getattr(ops, name) for name in capitalize_first]
+
 def get_edge_types():
-    # This could be found with a sys call
-    # to look at files in the ops folder
-    # and importing them
-    # So adding an op is easier, and we don't
-    # have to maintain this list manually
+    # May prefer using the EdgeSpace, as it dynamically
+    # finds all the relevant ops. But this still needs more
+    # refactoring
     return [Add, Mul, Inv, Transpose]
 
 
