@@ -1,5 +1,4 @@
 import detail
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
@@ -32,8 +31,6 @@ def solve(prob: Problem, tau=10, tau_prime=20, b=2, eta=0.1):
     graph = prob.partial_order.copy()
     graph.remove_node('_begin_')
     comps = nx.connected_components(prob.hypergraph)
-    components = nx.weakly_connected_components(graph)
-    comp = list(components)
     comp = [list(component) for component in comps]
     results = {component[0]: -1 for component in comp}
     print("Num. of Components: ", len(comp))
@@ -77,7 +74,6 @@ def greedy_solver(problem, tau_s, tau_imp, b, eta):
         best_solution = solution_map.copy()
         best_cost = problem.calculate_cost()
         count = 1
-        # TODO - Move this into generic exhaustive search
         while not finished:
             finished = algorithm_choices[0].next(algorithm_choices)
             problem = greedy_solve_helper(problem, b, eta)
@@ -93,7 +89,6 @@ def greedy_solver(problem, tau_s, tau_imp, b, eta):
         print("Minimum cost deviation method")
         for edge in problem.edges.values():
             edge.set_min_cost_deviance_algorithm()
-        implementation_choices = {edge.name: edge.options[edge.idx] for edge in problem.edges.values()}
         problem = greedy_solve_helper(problem, b, eta)
         vars_solution = [problem.vertices[n] for n, d in problem.hypergraph.nodes(data=True)
                          if d['bipartite'] == 1]
@@ -108,7 +103,6 @@ def trivial_init(problem):
     for level_set in detail.get_level_sets(problem.partial_order)[1:]:
         level_set_sortable = [(problem.edges[edge_name].program_index, edge_name) for edge_name in level_set]
         level_set_sortable.sort()
-        #print(level_set_sortable)
         for index, edge_name in level_set_sortable:
             edge = problem.edges[edge_name]
             cost_dict = edge.get_cost_dict()
@@ -121,7 +115,6 @@ def trivial_init(problem):
                 # being present in assigned, we might want to add some
                 # extra protection for that
                 choices = [var.idx if assigned[var.name] else None for var in local_vars]
-                #print("Choices: ", choices)
                 reduction = 0
                 for i in range(len(choices)):
                     if choices[i] is not None:
@@ -142,8 +135,6 @@ def trivial_init(problem):
                         if choices[i] is None:
                             local_vars[i].idx = min_loc[count]
                             count += 1
-                    #print("Local vars: ", local_vars)
-                    #print("Reassignment: ", local_vars, min_loc)
             for var_name in edge.vars:
                 assigned[var_name] = True
     return problem
@@ -179,14 +170,11 @@ def greedy_solve_helper(problem, b, eta):
     while len(decided_tiling) < num_vars:
         edge_bucket = compute_greedy_order(problem, edges_prime, decided_tiling, b, eta)
         t_prime = set()
-        print(edge_bucket)
         for edge_name in edge_bucket:
             for var_name in problem.edges[edge_name].vars:
                 if var_name not in decided_tiling:
                     t_prime.add(var_name)
-        print(t_prime)
         exhaust(problem, t_prime, [])
-        print(decided_tiling, problem.calculate_cost())
         decided_tiling = decided_tiling | t_prime
         edges_prime -= edge_bucket
     return problem

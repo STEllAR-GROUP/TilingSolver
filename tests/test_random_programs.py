@@ -14,9 +14,6 @@ class TestRandomPrograms(unittest.TestCase):
         print(problem.edges)
         print(get_level_sets(problem.partial_order))
         print(generate_entire_program(inputs, problem))
-        print(type(problem.partial_order))
-        #nx.draw(problem.partial_order)
-        #plt.show()
         print(list(problem.partial_order.edges))
 
     def test_cost_small_vars_many_expressions(self):
@@ -25,9 +22,6 @@ class TestRandomPrograms(unittest.TestCase):
         print(problem.edges)
         print(get_level_sets(problem.partial_order))
         print(generate_entire_program(inputs, problem))
-        print(type(problem.partial_order))
-        #nx.draw(problem.partial_order)
-        #plt.show()
         print(list(problem.partial_order.edges))
 
 

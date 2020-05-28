@@ -1,8 +1,8 @@
 import itertools
-import edge
 import random
 
-from detail import get_edge_types, MatrixSize, get_output_size_calculators, get_valid_input_lists, get_level_sets
+from detail import EdgeSpace, get_level_sets
+from matrix_size import MatrixSize
 from ops.add import Add
 from ops.inv import Inv
 from ops.mul import Mul
@@ -45,7 +45,7 @@ def make_multi_component_edge_set():
     return edge_set, vertex_sizes
 
 
-def find_output_size(vertex_sizes, op, inputs):
+def find_output_size(vertex_sizes, op, inputs, es):
     operands = []
     for i in inputs:
         found = False
@@ -55,15 +55,15 @@ def find_output_size(vertex_sizes, op, inputs):
                 found = True
         if not found:
             raise ValueError("Input not in vertex sizes")
-    out_size = get_output_size_calculators()[len(inputs)][op.op_name](operands)
+    out_size = es.get_output_size_calculators()[len(inputs)][op.op_name](operands)
     return out_size
 
 
-def find_valid_algorithms_and_inputs(vertex_sizes):
-    valid_sizes = get_valid_input_lists()
+def find_valid_algorithms_and_inputs(vertex_sizes, es):
+    valid_sizes = es.get_valid_input_lists()
     options = {i: {} for i in valid_sizes}
     return_ = []
-    types = {typ.op_name: typ for typ in get_edge_types()}
+    types = {typ.op_name: typ for typ in es.edge_types}
     for i in valid_sizes:
         for j in valid_sizes[i]:
             size_tuples = valid_sizes[i][j]()
@@ -85,7 +85,6 @@ def find_valid_algorithms_and_inputs(vertex_sizes):
     return return_
 
 
-
 def generate_input_var_sizes(input_var_names):
     vertex_sizes = [[], [], [], []]
     input_vars = input_var_names.copy()
@@ -99,8 +98,9 @@ def generate_random_problem(my_seed, num_expressions=None, num_input_vars=None):
     if my_seed is None:
         my_seed = random.randint(0, 100)
     random.seed(my_seed)
+    edge_space = EdgeSpace()
     print("Seed is {0}".format(my_seed))
-    exp_idx_tracker = {i.op_name: 0 for i in get_edge_types()}
+    exp_idx_tracker = {i.op_name: 0 for i in edge_space.edge_types}
     if num_input_vars is None:
         num_input_vars = random.randint(1, 8)
 
@@ -125,7 +125,7 @@ def generate_random_problem(my_seed, num_expressions=None, num_input_vars=None):
         new_var_names = []
         new_sizes = [[], [], [], []]
         while expression_layer_size > 0:
-            valid_algorithms_and_args = find_valid_algorithms_and_inputs(vertex_sizes)
+            valid_algorithms_and_args = find_valid_algorithms_and_inputs(vertex_sizes, edge_space)
             if len(use_all_inputs) > 0:
                 elem = random.choice(use_all_inputs)
                 use_all_inputs.remove(elem)
@@ -151,14 +151,13 @@ def generate_random_problem(my_seed, num_expressions=None, num_input_vars=None):
             edge_set.add(op(program_index, name, inputs))
             expression_layer_size -= 1
             num_expressions -= 1
-            out_size = find_output_size(vertex_sizes, op, inputs)
+            out_size = find_output_size(vertex_sizes, op, inputs, edge_space)
             new_sizes[out_size[0].value-1].append(name)
             program_index += 1
         for k in range(4):
             vertex_sizes[k] += new_sizes[k]
         all_vars += new_var_names
         prev_layer_added = new_var_names
-    #print("Rand prog", edge_set, new_var_name)
     return Problem(edge_set, beginning_vertex_sizes, 1), main_inputs
 
 

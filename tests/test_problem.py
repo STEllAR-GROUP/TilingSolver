@@ -16,9 +16,9 @@ class TestProblem(unittest.TestCase):
         sub_hypergraph = self.problem.hypergraph.subgraph(self.problem.ground_set | set(edges_subset)).copy()
         extra = list(nx.isolates(sub_hypergraph))
         sub_hypergraph.remove_nodes_from(extra)
-        vars = [n for n, d in sub_hypergraph.nodes(data=True) if d['bipartite'] == 1]
+        sub_vars = [n for n, d in sub_hypergraph.nodes(data=True) if d['bipartite'] == 1]
         edges = {edge.name: edge for edge in self.problem.edges.values() if edge.name in edges_subset}
-        vert = {var.name: var for var in self.problem.vertices.values() if var.name in vars}
+        vert = {var.name: var for var in self.problem.vertices.values() if var.name in sub_vars}
         second_problem = Problem([], [], 1, edges=edges, vertices=vert,
                                  hypergraph=sub_hypergraph, partial_order=sub_graph)
         return second_problem
@@ -28,7 +28,8 @@ class TestProblem(unittest.TestCase):
 
     def test_level_sets(self):
         level_sets = detail.get_level_sets(self.problem.partial_order)
-        self.assertEqual(level_sets, [set(['_begin_']), set(['add0', 'mul4', 'mul2']), set(['add3', 'add1'])])
+        self.assertEqual(level_sets, [{'_begin_'}, {'add0', 'mul4', 'mul2'},
+                                      {'add3', 'add1'}])
 
     def test_get_tiling_tuples(self):
         tiling_matches = self.problem.get_tiling_tuples(2)
@@ -46,8 +47,7 @@ class TestProblem(unittest.TestCase):
         sub_edges = ['_begin_', 'add0', 'mul2']
         sub_prob = self.get_sub_problem(sub_edges)
         level_sets = detail.get_level_sets(sub_prob.partial_order)
-        self.assertEqual(level_sets, [set(['_begin_']), set(['add0', 'mul2'])])
-
+        self.assertEqual(level_sets, [{'_begin_'}, {'add0', 'mul2'}])
 
     def test_cost(self):
         cost = self.problem()

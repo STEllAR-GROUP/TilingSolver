@@ -2,57 +2,44 @@ import ops
 import os
 
 
-from matrix_size import MatrixSize
-from ops.add import Add
-from ops.inv import Inv
-from ops.mul import Mul
-from ops.transpose import Transpose
-
-
 class EdgeSpace:
     def __init__(self):
         # This may be unnecessarily complex, because it's not a static
         # data fetch, so the commented line at the bottom may be preferable
-        filenames = next(os.walk('ops'))[2]
+        # This might be kind of a hack.
+        if os.getcwd()[-5:] == "tests":
+            filenames = next(os.walk('../ops'))[2]
+        else:
+            filenames = next(os.walk('ops'))[2]
         for name in filenames:
             assert '.py' in name
-        file_things = [name[:-3] for name in filenames]
-        capitalize_first = [name[0].upper() + name[1:] for name in file_things]
-        self.edge_types = [getattr(ops, name) for name in capitalize_first]
+        filenames = [name[:-3] for name in filenames]
+        capitalize_first = [name[0].upper() + name[1:] for name in filenames]
+        modules = [getattr(ops, filename) for filename in filenames]
+        self.edge_types = [getattr(modules[i], capitalize_first[i]) for i in range(len(filenames))]
 
-def get_edge_types():
-    # May prefer using the EdgeSpace, as it dynamically
-    # finds all the relevant ops. But this still needs more
-    # refactoring
-    return [Add, Mul, Inv, Transpose]
+    def get_arity_op_dict(self, name):
+        calcs = {}
+        for typ in self.edge_types:
+            calcs[typ.num_inputs] = {}
+        for typ in self.edge_types:
+            calcs[typ.num_inputs][typ.op_name] = getattr(typ, name)
+        return calcs
 
+    def get_output_size_calculators(self):
+        return self.get_arity_op_dict('output_size')
 
-def get_arity_op_dict(name):
-    calcs = {}
-    for typ in get_edge_types():
-        calcs[typ.num_inputs] = {}
-    for typ in get_edge_types():
-        calcs[typ.num_inputs][typ.op_name] = getattr(typ, name)
-    return calcs
+    def get_valid_input_lists(self):
+        return self.get_arity_op_dict('valid_input_sizes')
 
+    def get_op_dict(self, name):
+        calcs = {}
+        for typ in self.edge_types:
+            calcs[typ.op_name] = getattr(typ, name)()
+        return calcs
 
-def get_output_size_calculators():
-    return get_arity_op_dict('output_size')
-
-
-def get_valid_input_lists():
-    return get_arity_op_dict('valid_input_sizes')
-
-
-def get_op_dict(name):
-    calcs = {}
-    for typ in get_edge_types():
-        calcs[typ.op_name] = getattr(typ, name)()
-    return calcs
-
-
-def get_all_cost_dicts():
-    return get_op_dict('get_cost_dict')
+    def get_all_cost_dicts(self, ):
+        return self.get_op_dict('get_cost_dict')
 
 
 def get_level_sets(partial_order):

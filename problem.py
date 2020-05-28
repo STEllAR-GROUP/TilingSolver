@@ -2,9 +2,10 @@ import detail
 import networkx as nx
 import numpy as np
 
-from detail import MatrixSize, get_all_cost_dicts, EdgeSpace
+from detail import EdgeSpace
 from edge import Edge
 from itertools import permutations
+from matrix_size import MatrixSize
 from vertex import Vertex
 
 
@@ -87,8 +88,8 @@ class Problem:
 
         self.partial_order = nx.DiGraph()
         self.init_digraph(duplicate_outputs, partial_order=partial_order)
-        self.output_size_calculators = detail.get_output_size_calculators()
-        self.cost_dict = detail.get_all_cost_dicts()
+        self.output_size_calculators = self.edgespace.get_output_size_calculators()
+        self.cost_dict = self.edgespace.get_all_cost_dicts()
         self.vertices = {}
         self.init_vertices(vertex_sizes, duplicate_outputs, initial_distribution, vertices)
 
