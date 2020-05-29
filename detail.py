@@ -1,3 +1,4 @@
+import inspect
 import ops
 import os
 
@@ -7,6 +8,7 @@ class EdgeSpace:
         # This may be unnecessarily complex, because it's not a static
         # data fetch, so the commented line at the bottom may be preferable
         # This might be kind of a hack.
+        #print(os.getcwd())
         if os.getcwd()[-5:] == "tests":
             filenames = next(os.walk('../ops'))[2]
         else:
@@ -15,6 +17,7 @@ class EdgeSpace:
             assert '.py' in name
         filenames = [name[:-3] for name in filenames]
         capitalize_first = [name[0].upper() + name[1:] for name in filenames]
+        #print(inspect.getmembers(ops))
         modules = [getattr(ops, filename) for filename in filenames]
         self.edge_types = [getattr(modules[i], capitalize_first[i]) for i in range(len(filenames))]
 

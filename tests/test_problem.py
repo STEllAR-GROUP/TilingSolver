@@ -8,6 +8,7 @@ from problem import Problem
 
 class TestProblem(unittest.TestCase):
     def setUp(self):
+        es = detail.EdgeSpace()
         edge_set, vertex_sizes = make_basic_edge_set()
         self.problem = Problem(edge_set, vertex_sizes)
 
@@ -18,8 +19,8 @@ class TestProblem(unittest.TestCase):
         sub_hypergraph.remove_nodes_from(extra)
         sub_vars = [n for n, d in sub_hypergraph.nodes(data=True) if d['bipartite'] == 1]
         edges = {edge.name: edge for edge in self.problem.edges.values() if edge.name in edges_subset}
-        vert = {var.name: var for var in self.problem.vertices.values() if var.name in sub_vars}
-        second_problem = Problem([], [], 1, edges=edges, vertices=vert,
+        vert = {var.name: var for var in self.problem.variables.values() if var.name in sub_vars}
+        second_problem = Problem([], [], 1, edges=edges, variables=vert,
                                  hypergraph=sub_hypergraph, partial_order=sub_graph)
         return second_problem
 

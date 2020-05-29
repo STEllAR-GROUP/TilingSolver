@@ -1,5 +1,6 @@
 import itertools
 import random
+import time
 
 from detail import EdgeSpace, get_level_sets
 from matrix_size import MatrixSize
@@ -8,6 +9,7 @@ from ops.inv import Inv
 from ops.mul import Mul
 from ops.transpose import Transpose
 from problem import Problem
+from solve import local_solve, greedy_solve
 
 
 def make_basic_edge_set():
@@ -43,6 +45,55 @@ def make_multi_component_edge_set():
     # [l_l, l_s, s_l, s_s]
     vertex_sizes = [['c'], ['b', 'aa', 'bb'], ['a'], ['cc']]
     return edge_set, vertex_sizes
+
+
+def run_four_tests(edge_set, vertex_sizes):
+    prob = Problem(edge_set, vertex_sizes)
+
+    start = time.perf_counter()
+    cost, result = local_solve(prob)
+    stop = time.perf_counter()
+    print("1.")
+    print("    Local solve results: ", cost, result)
+    print(f"    Time for completion: {stop-start:0.4f}")
+    print("----------------------------------------")
+
+    implementation_space_size = 1
+    for edge in prob.edges:
+        implementation_space_size *= prob.edges[edge].num_implementations()
+    tiling_space_size = 3 ** len(prob.ground_set)
+    tau = implementation_space_size*tiling_space_size+1
+    # Start with a fresh problem
+    prob.reset_indices()
+    start = time.perf_counter()
+    results = greedy_solve(prob, tau)
+    stop = time.perf_counter()
+    print("2.")
+    print("    Exhaustive search results: ", results)
+    print(f"    Time for completion: {stop-start:0.4f}")
+    print("----------------------------------------")
+
+    # Start with a fresh problem
+    prob.reset_indices()
+    start = time.perf_counter()
+    results = greedy_solve(prob, tau_prime=(implementation_space_size+1))
+    stop = time.perf_counter()
+    print("3.")
+    print("    Implementation space search result: ", results)
+    print(f"    Time for completion: {stop-start:0.4f}")
+    print("----------------------------------------")
+
+    # Start with a fresh problem
+    prob.reset_indices()
+    start = time.perf_counter()
+    results = greedy_solve(prob, tau=2, tau_prime=2)
+    stop = time.perf_counter()
+    print("4.")
+    print("    Min deviance search result: ", results)
+    print(f"    Time for completion: {stop-start:0.4f}")
+    print("----------------------------------------")
+
+
 
 
 def find_output_size(vertex_sizes, op, inputs, es):
@@ -172,7 +223,7 @@ def generate_entire_program(inputs, problem):
                      MatrixSize.large_large: (large_dim, large_dim)}
     program = ""
     for i in inputs:
-        row_dim, col_dim = dimension_map[problem.vertices[i].size]
+        row_dim, col_dim = dimension_map[problem.variables[i].size]
         program += (str(i)+" = np.random("+str(row_dim)+", "+str(col_dim)+")\n")
     for i in get_level_sets(problem.partial_order)[1:]:
         while len(i) > 0:

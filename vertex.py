@@ -62,7 +62,7 @@ class Vertex(Nextable):
         return self.options[self.idx]
 
     def __str__(self):
-        return self.name + " " + self.options[self.idx] + " " + str(self.start_idx)
+        return self.name + " " + self.options[self.idx] + " " + str(self.idx)
 
     def __repr__(self):
-        return self.name + " " + self.options[self.idx] + " " + str(self.start_idx)
+        return self.name + " " + self.options[self.idx] + " " + str(self.idx)

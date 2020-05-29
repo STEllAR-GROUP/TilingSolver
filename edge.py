@@ -45,7 +45,7 @@ class Edge(Nextable):
         assert len(self.inputs) == self.num_inputs
 
     def __repr__(self):
-        return self.expression.format(self.output, *self.inputs)
+        return self.expression.format(self.output, *self.inputs)+str(self.idx)
 
     def __str__(self):
         return self.expression.format(self.output, *self.inputs)

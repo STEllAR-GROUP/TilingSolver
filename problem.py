@@ -46,7 +46,7 @@ class Problem:
     beginning distributed matrix is spread across
     """
     def __init__(self, edge_set, vertex_sizes, num_locs=1,
-                 initial_distribution=None, hypergraph=None, partial_order=None, edges=None, vertices=None):
+                 initial_distribution=None, hypergraph=None, partial_order=None, edges=None, variables=None):
         self.edgespace = EdgeSpace()
         if initial_distribution is None:
             self.even_dist = True
@@ -55,11 +55,11 @@ class Problem:
 
         if hypergraph is not None \
                 and partial_order is not None \
-                and vertices is not None\
+                and variables is not None\
                 and edges is not None:
             vertex_sizes = [[], [], [], []]
             for i in range(1, 5):
-                vertex_sizes[i-1] = [k.name for k in vertices.values() if k.size == MatrixSize(i)]
+                vertex_sizes[i-1] = [k.name for k in variables.values() if k.size == MatrixSize(i)]
             edge_set = edges.values()
         assert len(edge_set) > 0
         for k in edge_set:
@@ -90,10 +90,11 @@ class Problem:
         self.init_digraph(duplicate_outputs, partial_order=partial_order)
         self.output_size_calculators = self.edgespace.get_output_size_calculators()
         self.cost_dict = self.edgespace.get_all_cost_dicts()
-        self.vertices = {}
-        self.init_vertices(vertex_sizes, duplicate_outputs, initial_distribution, vertices)
+        self.variables = {}
+        self.init_variables(vertex_sizes, duplicate_outputs, initial_distribution, variables)
 
     def init_digraph(self, duplicate_outputs, partial_order=None):
+        # Vertices of the digraph are the expressions in the user program
         if partial_order is not None:
             self.partial_order = partial_order
             return
@@ -131,9 +132,9 @@ class Problem:
                     depends_on[p.name].add('_begin_')
         self.partial_order = nx.DiGraph(depends_on).reverse()
 
-    def init_vertices(self, vertex_sizes, duplicate_outputs, initial_locality_distribution, vertices=None):
-        if vertices is not None:
-            self.vertices = vertices
+    def init_variables(self, vertex_sizes, duplicate_outputs, initial_locality_distribution, variables=None):
+        if variables is not None:
+            self.variables = variables
             return
         # Initialize all of the variables in the input layer
         for i in range(len(vertex_sizes)):
@@ -143,7 +144,7 @@ class Problem:
                     dist = initial_locality_distribution[var]
                 else:
                     dist = []
-                self.vertices[var] = Vertex(var, MatrixSize(i+1), 0, 'row', dist)
+                self.variables[var] = Vertex(var, MatrixSize(i + 1), 0, 'row', dist)
         # The first level set is the artificial '_begin_' node
         for level_set in detail.get_level_sets(self.partial_order)[1:]:
             for edge_name in level_set:
@@ -163,12 +164,12 @@ class Problem:
                 # this should be a higher level config setting
                 use_duplicates = False
                 if use_duplicates:
-                    self.vertices[var_name] = Vertex(var_name, out_size, generation, 'row', out_dist)
+                    self.variables[var_name] = Vertex(var_name, out_size, generation, 'row', out_dist)
                 else:
-                    if edge.output not in self.vertices.keys():
-                        self.vertices[edge.output] = Vertex(edge.output, out_size,
-                                                            0, 'row',
-                                                            out_dist)
+                    if edge.output not in self.variables.keys():
+                        self.variables[edge.output] = Vertex(edge.output, out_size,
+                                                             0, 'row',
+                                                             out_dist)
 
     def init_hypergraph(self, hypergraph=None):
         if hypergraph is not None:
@@ -191,6 +192,12 @@ class Problem:
     def calculate_cost(self):
         return self.calculate_edge_subset_cost(self.edges.keys())
 
+    def reset_indices(self):
+        for edge in self.edges.values():
+            edge.idx = 0
+        for var in self.variables.values():
+            var.idx = var.start_idx
+
     def calculate_edge_subset_cost(self, edge_subset):
         tmp_sum = 0
         for edge_name in edge_subset:
@@ -198,7 +205,7 @@ class Problem:
             cost_dict = edge.get_cost_dict()
             func = cost_dict[edge.options[edge.idx]]
             cost_matrix = func()
-            loc = np.array([self.vertices[name].idx for name in edge.vars])
+            loc = np.array([self.variables[name].idx for name in edge.vars])
             cost = cost_matrix[tuple(loc.T)]
             tmp_sum += edge.loop_weight*cost
         return tmp_sum
@@ -207,11 +214,11 @@ class Problem:
         return self.output_size_calculators[edge.get_arity()][edge.op_name]
 
     def get_size_and_distribution(self, var_name):
-        var = self.vertices[var_name]
+        var = self.variables[var_name]
         return var.size, var.dist
 
     def get_distribution(self, var_name):
-        return self.vertices[var_name].dist
+        return self.variables[var_name].dist
 
     def get_tiling_tuples(self, size):
         return sorted(list(set(permutations(['row', 'row', 'col', 'col', 'block', 'block'], size))))

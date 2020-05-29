@@ -1,7 +1,7 @@
 import unittest
 
 from problem import Problem
-from solve import solve, trivial_solve
+from solve import greedy_solve, local_solve
 from util_test import make_basic_edge_set, generate_random_problem, \
     generate_entire_program, make_three_level_edge_set, \
     make_multi_component_edge_set
@@ -15,9 +15,9 @@ class TestSolver(unittest.TestCase):
     def run_problem(self, problem, tau=10, tau_prime=20,
                     b=2, eta=0.1, trivial=False):
         if trivial:
-            result = trivial_solve(problem)
+            result = local_solve(problem)
         else:
-            result = solve(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta)
+            result = greedy_solve(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta)
         print("-----------------------------")
         print("Result: ", result)
         print("-----------------------------")
