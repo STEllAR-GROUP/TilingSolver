@@ -47,7 +47,7 @@ def make_multi_component_edge_set():
     return edge_set, vertex_sizes
 
 
-def run_four_tests(edge_set, vertex_sizes):
+def run_four_tests(edge_set, vertex_sizes, verbosity=0):
     prob = Problem(edge_set, vertex_sizes)
 
     start = time.perf_counter()
@@ -66,7 +66,7 @@ def run_four_tests(edge_set, vertex_sizes):
     # Start with a fresh problem
     prob.reset_indices()
     start = time.perf_counter()
-    results = greedy_solve(prob, tau)
+    results = greedy_solve(prob, tau, verbosity=verbosity)
     stop = time.perf_counter()
     print("2.")
     print("    Exhaustive search results: ", results)
@@ -76,7 +76,7 @@ def run_four_tests(edge_set, vertex_sizes):
     # Start with a fresh problem
     prob.reset_indices()
     start = time.perf_counter()
-    results = greedy_solve(prob, tau_prime=(implementation_space_size+1))
+    results = greedy_solve(prob, tau_prime=(implementation_space_size+1), verbosity=verbosity)
     stop = time.perf_counter()
     print("3.")
     print("    Implementation space search result: ", results)
@@ -86,14 +86,12 @@ def run_four_tests(edge_set, vertex_sizes):
     # Start with a fresh problem
     prob.reset_indices()
     start = time.perf_counter()
-    results = greedy_solve(prob, tau=2, tau_prime=2)
+    results = greedy_solve(prob, tau=2, tau_prime=2, verbosity=verbosity)
     stop = time.perf_counter()
     print("4.")
     print("    Min deviance search result: ", results)
     print(f"    Time for completion: {stop-start:0.4f}")
     print("----------------------------------------")
-
-
 
 
 def find_output_size(vertex_sizes, op, inputs, es):
