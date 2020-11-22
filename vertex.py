@@ -1,4 +1,5 @@
 from nextable import Nextable
+from matrix_size import MatrixSize
 
 
 class Vertex(Nextable):
@@ -57,9 +58,26 @@ class Vertex(Nextable):
             return False
         return False
 
+    def get_opposite_idx(self):
+        if self.idx == 0:
+            return 1
+        elif self.idx == 1:
+            return 0
+        else:
+            return 2
+
     @property
     def tiling_type(self):
         return self.options[self.idx]
+
+    @property
+    def flip_size(self):
+        if self.size == MatrixSize.large_small:
+            return MatrixSize.small_large
+        elif self.size == MatrixSize.small_large:
+            return MatrixSize.small_large
+        return self.size
+
 
     def __str__(self):
         return self.name + " " + self.options[self.idx] + " " + str(self.idx)

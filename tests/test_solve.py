@@ -4,20 +4,17 @@ from problem import Problem
 from solve import greedy_solve, local_solve
 from util_test import make_basic_edge_set, generate_random_problem, \
     generate_entire_program, make_three_level_edge_set, \
-    make_multi_component_edge_set
+    make_multi_component_edge_set, make_basic_edge_set_add_transpose
 
 
 class TestSolver(unittest.TestCase):
-    def setUp(self):
-        edge_set, vertex_sizes = make_basic_edge_set()
-        self.problem = Problem(edge_set, vertex_sizes, 1)
 
     def run_problem(self, problem, tau=10, tau_prime=20,
-                    b=2, eta=0.1, trivial=False):
+                    b=2, eta=0.1, trivial=False, verbosity=0, skip_real_exhaustive=False):
         if trivial:
             result = local_solve(problem)
         else:
-            result = greedy_solve(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta)
+            result = greedy_solve(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, verbosity=verbosity, skip_real_exhaustive=False)
         print("-----------------------------")
         print("Result: ", result)
         print("-----------------------------")
@@ -26,6 +23,11 @@ class TestSolver(unittest.TestCase):
     def run_basic_problem(self, tau=10, tau_prime=20, b=2, eta=0.1,
                           trivial=False):
         problem = Problem(*make_basic_edge_set())
+        return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
+
+    def run_basic_problem_add_transpose(self, tau=10, tau_prime=20, b=2, eta=0.1,
+                          trivial=False):
+        problem = Problem(*make_basic_edge_set_add_transpose())
         return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
 
     def run_three_level_problem(self, tau=10, tau_prime=20, b=2, eta=0.1,
@@ -38,14 +40,32 @@ class TestSolver(unittest.TestCase):
         return self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
 
     def run_random_problem(self, seed=None, tau=10, tau_prime=20,
-                           b=2, eta=0.1, num_expressions=None, num_input_vars=None, trivial=False):
+                           b=2, eta=0.1, num_expressions=None, num_input_vars=None, trivial=False, verbosity=0, skip_real_exhaustive=False):
         problem, inputs = generate_random_problem(seed, num_expressions=num_expressions, num_input_vars=num_input_vars)
-        result = self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial)
+        result = self.run_problem(problem, tau=tau, tau_prime=tau_prime, b=b, eta=eta, trivial=trivial, verbosity=verbosity, skip_real_exhaustive=False)
         print(generate_entire_program(inputs, problem))
         return result
 
     def test_trivial_solve(self):
         self.assertEqual(self.run_basic_problem(trivial=True),
+                         (5.0,
+                          {'a': 'row',
+                           'add0': 'normal',
+                           'add1': 'normal',
+                           'add3': 'normal',
+                           'b': 'row',
+                           'c': 'col',
+                           'd': 'row',
+                           'e': 'row',
+                           'f': 'row',
+                           'g': 'row',
+                           'h': 'row',
+                           'i': 'row',
+                           'mul2': 'dot_d',
+                           'mul4': 'dot_d'}))
+
+    def test_trivial_solve_add_transpose(self):
+        self.assertEqual(self.run_basic_problem_add_transpose(trivial=True),
                          (5.0,
                           {'a': 'row',
                            'add0': 'normal',
@@ -167,12 +187,19 @@ class TestSolver(unittest.TestCase):
         # Solution is 49.0, for 0.006 sec
         self.run_random_problem(seed=101, num_expressions=20,
                                 num_input_vars=4, trivial=True)
+    '''
+    def test_skinny_program_exhaustive_search(self):
+        # Solution is 38.0, six minutes
+        self.run_random_problem(seed=101, num_expressions=8,
+                                num_input_vars=4, tau=9000000000000000,
+                                tau_prime=80000, b=2, eta=0.1, verbosity=1)
 
     def test_skinny_program_implementation_search(self):
         # Solution is 38.0, six minutes
         self.run_random_problem(seed=101, num_expressions=20,
                                 num_input_vars=4,
                                 tau_prime=80000, b=2, eta=0.1)
+    '''
 
     def test_skinny_program_min_deviance(self):
         # Solution is 68.0, 1/5th of second

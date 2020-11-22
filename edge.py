@@ -30,12 +30,12 @@ class Edge(Nextable):
         # We only support expressions with one assigned variable for now
         self.program_index = program_index
         self.output = output
-        self.inputs = inputs
+        self._inputs = inputs
         self.inplace = False
         self.loop_weight = loop_weight
         if self.output in self.inputs:
             self.inplace = True
-        self.vars = [self.output]+self.inputs
+        self._vars = [self.output]+self.inputs
         self.check_arity()
 
     def get_arity(self):
@@ -43,6 +43,14 @@ class Edge(Nextable):
 
     def check_arity(self):
         assert len(self.inputs) == self.num_inputs
+
+    @property
+    def vars(self):
+        return self._vars
+
+    @property
+    def inputs(self):
+        return self._inputs
 
     def __repr__(self):
         return self.expression.format(self.output, *self.inputs)+str(self.idx)
@@ -63,6 +71,9 @@ class Edge(Nextable):
         costs = [dict_func() for dict_func in self.get_cost_dict().values()]
         deviations = [mat.max()/mat.min() for mat in costs]
         self.idx = np.argmin(deviations)
+
+    def get_var_indices(self, var_dict):
+        return np.array([var_dict[name].idx for name in self.vars]), 0
 
     @property
     def algorithm(self):

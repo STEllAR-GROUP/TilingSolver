@@ -55,7 +55,7 @@ class Problem:
 
         if hypergraph is not None \
                 and partial_order is not None \
-                and variables is not None\
+                and variables is not None \
                 and edges is not None:
             vertex_sizes = [[], [], [], []]
             for i in range(1, 5):
@@ -74,7 +74,6 @@ class Problem:
         # edge set
         self.ground_set = {n for n, d in self.hypergraph.nodes(data=True)
                            if d['bipartite'] == 1}
-
         assert self.ground_set == (self.ground_set | set(vertex_sizes[0] +
                                                          vertex_sizes[1] +
                                                          vertex_sizes[2] +
@@ -151,7 +150,7 @@ class Problem:
                 edge = self.edges[edge_name]
                 output_size_func = self.get_output_size_calculator(edge)
                 operands = [self.get_size_and_distribution(k)
-                            for k in edge.inputs]
+                            for k in edge._inputs]
                 generation = duplicate_outputs[edge.output].index(edge)
                 # TODO - Might be worthwhile to verify that this output
                 # only happens once in this level_set as output,
@@ -205,8 +204,11 @@ class Problem:
             cost_dict = edge.get_cost_dict()
             func = cost_dict[edge.options[edge.idx]]
             cost_matrix = func()
-            loc = np.array([self.variables[name].idx for name in edge.vars])
-            cost = cost_matrix[tuple(loc.T)]
+            # Need to add in here support for variables being named aT or a^ or something
+            # so that we can allow them to be the transposed version of that variable
+            #loc = np.array([self.variables[name].idx for name in edge.vars])
+            loc, mod_cost = edge.get_var_indices(self.variables)
+            cost = cost_matrix[tuple(loc.T)]+mod_cost
             tmp_sum += edge.loop_weight*cost
         return tmp_sum
 
@@ -214,7 +216,14 @@ class Problem:
         return self.output_size_calculators[edge.get_arity()][edge.op_name]
 
     def get_size_and_distribution(self, var_name):
-        var = self.variables[var_name]
+        var_name_prime = var_name
+        flip = False
+        if var_name_prime[-1] == 'T':
+            var_name_prime = var_name_prime[:-1]
+            flip = True
+        var = self.variables[var_name_prime]
+        if flip:
+            return var.flip_size, var.dist
         return var.size, var.dist
 
     def get_distribution(self, var_name):
