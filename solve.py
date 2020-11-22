@@ -21,7 +21,7 @@ def get_sub_problem(prob, sub_hypergraph, sub_graph):
 
 def local_solve(prob: Problem):
     # TODO - Change name of trivial init
-    prob = trivial_init(prob)
+    prob = find_local_solution(prob)
     cost = prob.calculate_cost()
     vars_solution = list(prob.variables.values())
     algorithm_choices = list(prob.edges.values())
@@ -30,26 +30,28 @@ def local_solve(prob: Problem):
     return cost, solution_map
 
 
-def greedy_solve(prob: Problem, tau=10, tau_prime=20, b=2, eta=0.1, verbosity=0):
+def greedy_solve(prob: Problem, tau=10, tau_prime=20, b=2, eta=0.1, verbosity=0, skip_real_exhaustive=False):
     graph = prob.partial_order.copy()
     graph.remove_node('_begin_')
     comps = nx.connected_components(prob.hypergraph)
     comp = [list(component) for component in comps]
     component_names = ["component_"+str(i) for i in range(len(comp))]
     results = {component_name: -1 for component_name in component_names}
+    print(graph.nodes, graph.edges)
     if verbosity > 0:
         print("Num. of Components: ", len(comp))
     for i in range(len(comp)):
+        print(i)
         component = comp[i]
         sub_graph = prob.partial_order.subgraph(list(set(component) | {'_begin_'})).copy()
         sub_hypergraph = prob.hypergraph.subgraph(prob.ground_set | set(component)).copy()
         isolates = list(nx.isolates(sub_hypergraph))
         sub_hypergraph.remove_nodes_from(isolates)
-        results[component_names[i]] = greedy_solver(get_sub_problem(prob, sub_hypergraph, sub_graph), tau, tau_prime, b, eta, verbosity)
+        results[component_names[i]] = greedy_solver(get_sub_problem(prob, sub_hypergraph, sub_graph), tau, tau_prime, b, eta, verbosity, skip_real_exhaustive=skip_real_exhaustive)
     return results
 
 
-def greedy_solver(problem, tau, tau_prime, b, eta, verbosity):
+def greedy_solver(problem, tau, tau_prime, b, eta, verbosity, skip_real_exhaustive=False):
     vars = [n for n, d in problem.hypergraph.nodes(data=True) if d['bipartite'] == 1]
     # Need to create new Problem from our sub_hyper and sub_graph
     # It's the only proper way to do this
@@ -65,7 +67,7 @@ def greedy_solver(problem, tau, tau_prime, b, eta, verbosity):
         vars_solution = [n for n, d in problem.hypergraph.nodes(data=True)
                          if d['bipartite'] == 1]
         edges_solution = [edge_name for edge_name in problem.edges]
-        return exhaust(problem, vars_solution, edges_solution, implementation_space_size*tiling_space_size, verbosity)
+        return exhaust(problem, vars_solution, edges_solution, implementation_space_size*tiling_space_size, verbosity, skip_real_exhaustive=skip_real_exhaustive)
     elif verbosity > 0:
         print("S too big for exhaustive search at: ", implementation_space_size*tiling_space_size, " = ", implementation_space_size, "*", tiling_space_size)
         print("Number of vars: ", len(vars))
@@ -109,7 +111,7 @@ def greedy_solver(problem, tau, tau_prime, b, eta, verbosity):
         return problem.calculate_cost(), solution_map
 
 
-def trivial_init(problem):
+def find_local_solution(problem):
     assigned = {var_name: False for var_name in problem.variables}
     for level_set in detail.get_level_sets(problem.partial_order)[1:]:
         level_set_sortable = [(problem.edges[edge_name].program_index, edge_name) for edge_name in level_set]
@@ -152,7 +154,7 @@ def trivial_init(problem):
     return problem
 
 
-def exhaust(problem, var_names, edge_names, size, verbosity=0):
+def exhaust(problem, var_names, edge_names, size, verbosity=0, skip_real_exhaustive=False):
     vars_solution = [problem.variables[var_name] for var_name in var_names]
     edges_solution = [problem.edges[edge_name] for edge_name in edge_names]
     total_solution = vars_solution+edges_solution
@@ -166,10 +168,12 @@ def exhaust(problem, var_names, edge_names, size, verbosity=0):
     # individual threads. Would require copying the problem
     # to avoid race conditions though
     start = time.perf_counter()
-    factor = 4
+    factor = 1000000000000000000000000
     bound = int(size/factor)
     bound_count = 0
     total_time = 0.0
+    if skip_real_exhaustive:
+        print("Size of space: ", size)
     while not finished:
         if verbosity > 0 and bound > 0 and count % bound == 0:
             stop = time.perf_counter()
@@ -177,10 +181,13 @@ def exhaust(problem, var_names, edge_names, size, verbosity=0):
             if bound_count > 0:
                 time_remaining = (factor-bound_count)*(total_time/bound_count)
             else:
-                time_remaining = "Unknown"
-            print(f"{bound_count*(100/factor)}% - Time remaining: {time_remaining}")
+                time_remaining = -1.0 #"Unknown"
+            #print(type(total_time), type(time_remaining))
+            print(f"{str(bound_count*(100.0/factor))}% - Time remaining: {str(time_remaining)} - Total projected time: {str(time_remaining+total_time)}")
             start = time.perf_counter()
             bound_count += 1
+            if skip_real_exhaustive and bound_count > 3:
+                break
         finished = total_solution[0].next(total_solution)
         tmp_cost = problem.calculate_cost()
         if tmp_cost < best_cost:

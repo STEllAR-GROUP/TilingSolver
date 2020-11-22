@@ -1,4 +1,5 @@
 import edge
+from ops.transpose import Transpose
 import numpy as np
 
 from matrix_size import MatrixSize
@@ -13,6 +14,30 @@ class Add(edge.Edge):
 
     def __init__(self, program_index, output, inputs):
         super(Add, self).__init__(program_index, output, inputs)
+
+    def get_var_indices(self, var_dict):
+        stripped_vars = self.vars
+        flip = [x != y for (x, y) in zip(stripped_vars, self._vars)]
+        loc = np.zeros(len(stripped_vars), dtype=np.int32)
+        mod_cost = 0
+        transpose_cost_matrix = Transpose.normal_cost()
+        for i in range(loc.shape[0]):
+            var = var_dict[stripped_vars[i]]
+            if flip[i]:
+                loc[i] = var.get_opposite_idx()
+                mod_cost += transpose_cost_matrix[loc[i], var.idx]
+            else:
+                loc[i] = var.idx
+        return loc, mod_cost
+
+    @property
+    def vars(self):
+        stripped_vars = [i[:-1] if i[-1] == 'T' else i for i in self._vars]
+        return stripped_vars
+
+    @property
+    def inputs(self):
+        return [i[:-1] if i[-1] == 'T' else i for i in self._inputs]
 
     @staticmethod
     def output_size(operands):
