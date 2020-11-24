@@ -2,6 +2,8 @@ import numpy as np
 
 from nextable import Nextable
 
+from matrix_size import get_matrix_weight
+
 
 class Edge(Nextable):
     """
@@ -72,8 +74,10 @@ class Edge(Nextable):
         deviations = [mat.max()/mat.min() for mat in costs]
         self.idx = np.argmin(deviations)
 
-    def get_var_indices(self, var_dict):
-        return np.array([var_dict[name].idx for name in self.vars]), 0
+    def get_var_info(self, var_dict):
+        indices = np.array([var_dict[name].idx for name in self.vars])
+        matrix_sizes = [var_dict[name].size for name in self.vars]
+        return indices, matrix_sizes, 0
 
     @property
     def algorithm(self):
@@ -98,3 +102,28 @@ class Edge(Nextable):
     @staticmethod
     def random_imp():
         raise NotImplementedError
+
+    def expression_weight(self):
+        # This method will return the weight associated
+        # with this expression, dependant on the implementations
+        # available
+        raise NotImplementedError
+
+    def get_acceptable_tilings(self):
+        # This method will check if the tilings supplied are
+        # allowed given the current implementation which is selected
+        raise NotImplementedError
+
+    @staticmethod
+    def find_closest_tiling(as_is, acceptable):
+        optimal = as_is
+        if optimal in acceptable:
+            return [False for _ in as_is]
+        best_cost = 9999999.9
+        for acc in acceptable:
+            change_mask = [False if i == j else True for i, j in zip(as_is, acc)]
+            change_sum = float(sum(change_mask))
+            if change_sum < best_cost:
+                optimal = change_mask
+                best_cost = float(change_sum)
+        return optimal

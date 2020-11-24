@@ -77,20 +77,20 @@ def run_four_tests(edge_set, vertex_sizes, verbosity=0, prob=None, skip_real_exh
     # Start with a fresh problem
     prob.reset_indices()
     start = time.perf_counter()
-    #results = greedy_solve(prob, tau, verbosity=verbosity, skip_real_exhaustive=skip_real_exhaustive)
+    results = greedy_solve(prob, tau, verbosity=verbosity, skip_real_exhaustive=skip_real_exhaustive)
     stop = time.perf_counter()
     print("2.")
-    #print("    Exhaustive search results: ", results)
+    print("    Exhaustive search results: ", results)
     print(f"    Time for completion: {stop-start:0.4f}")
     print("----------------------------------------")
 
     # Start with a fresh problem
     prob.reset_indices()
     start = time.perf_counter()
-    #results = greedy_solve(prob, tau_prime=(implementation_space_size+1), verbosity=verbosity)
+    results = greedy_solve(prob, tau_prime=(implementation_space_size+1), verbosity=verbosity)
     stop = time.perf_counter()
     print("3.")
-    #print("    Implementation space search result: ", results)
+    print("    Implementation space search result: ", results)
     print(f"    Time for completion: {stop-start:0.4f}")
     print("----------------------------------------")
 

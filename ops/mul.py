@@ -81,3 +81,26 @@ class Mul(edge.Edge):
     @staticmethod
     def random_imp():
         return random.choice(["cannon", "dot_d"])
+
+    def expression_weight(self):
+        if self.idx == 0:
+            return 0.7
+        else:
+            return 1.0
+
+    def get_acceptable_tilings(self):
+        r = "row"
+        c = "col"
+        b = "block"
+        if self.idx == 0:
+            # Cannon
+            return [[b, b, b]]
+        else:
+            # Dot_d
+            acceptable = [[r, r, r],
+                          [r, r, c],
+                          [r, r, b],
+                          [c, r, c],
+                          [c, c, c],
+                          [c, b, c]]
+            return acceptable

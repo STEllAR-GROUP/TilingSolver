@@ -20,6 +20,9 @@ class Vertex(Nextable):
     available localities, (that is, when all available localities are used
     in distributing this data structure) loc_list is simply empty
     """
+    # Since we're gonna start using these for tracking available tiling configs
+    # in the expressions, these should really be an Enum. But I don't currently
+    # have time for that. Je to škoda
     options = ['row', 'col', 'block']
 
     def __init__(self, var_name, size, generation, tiling_type, dist):
