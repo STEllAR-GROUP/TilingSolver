@@ -61,4 +61,3 @@ def get_level_sets(partial_order):
                 in_degrees[j] -= 1
         count += 1
     return sets
-

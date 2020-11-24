@@ -44,3 +44,16 @@ class Inv(edge.Edge):
     @staticmethod
     def random_imp():
         return "normal"
+
+    def expression_weight(self):
+        return 1.0
+
+    def get_acceptable_tilings(self):
+        r = "row"
+        c = "col"
+        b = "block"
+        acceptable = [[r, r],
+                      [c, c],
+                      [b, b]]
+        return acceptable
+

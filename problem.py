@@ -5,7 +5,7 @@ import numpy as np
 from detail import EdgeSpace
 from edge import Edge
 from itertools import permutations
-from matrix_size import MatrixSize
+from matrix_size import MatrixSize, get_matrix_weight
 from vertex import Vertex
 
 
@@ -207,8 +207,19 @@ class Problem:
             # Need to add in here support for variables being named aT or a^ or something
             # so that we can allow them to be the transposed version of that variable
             #loc = np.array([self.variables[name].idx for name in edge.vars])
-            loc, mod_cost = edge.get_var_indices(self.variables)
-            cost = cost_matrix[tuple(loc.T)]+mod_cost
+            loc, sizes, mod_cost = edge.get_var_info(self.variables)
+
+            tiling_map = {0: "row", 1: "col", 2: "block"}
+            tilings = [tiling_map[l] for l in loc]
+
+            change_mask = edge.find_closest_tiling(tilings, edge.get_acceptable_tilings())
+            float_change_mask = [1.0 if k else 0.0 for k in change_mask]
+            matrix_weights = [get_matrix_weight(x) for x in sizes]
+            edge_weight = edge.expression_weight()
+
+            #cost = cost_matrix[tuple(loc.T)]+mod_cost
+            prod = [a*b for a, b in zip(matrix_weights, float_change_mask)]
+            cost = edge_weight + sum(prod)
             tmp_sum += edge.loop_weight*cost
         return tmp_sum
 

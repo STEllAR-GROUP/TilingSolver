@@ -4,7 +4,8 @@ from problem import Problem
 from solve import greedy_solve, local_solve
 from util_test import make_basic_edge_set, generate_random_problem, \
     generate_entire_program, make_three_level_edge_set, \
-    make_multi_component_edge_set, make_basic_edge_set_add_transpose
+    make_multi_component_edge_set, make_basic_edge_set_add_transpose, \
+    run_four_tests
 
 
 class TestSolver(unittest.TestCase):
@@ -46,6 +47,8 @@ class TestSolver(unittest.TestCase):
         print(generate_entire_program(inputs, problem))
         return result
 
+    '''
+    
     def test_trivial_solve(self):
         self.assertEqual(self.run_basic_problem(trivial=True),
                          (5.0,
@@ -93,71 +96,75 @@ class TestSolver(unittest.TestCase):
         self.run_basic_problem(tau_prime=2)
 
     def test_trivial_three_solve(self):
-        self.assertEqual(self.run_three_level_problem(trivial=True),
-                         (4.0,
-                          {'a': 'block',
-                           'add1': 'normal',
-                           'b': 'block',
-                           'c': 'block',
-                           'd': 'block',
-                           'e': 'block',
-                           'f': 'block',
-                           'g': 'block',
-                           'mul0': 'cannon',
-                           'mul2': 'cannon',
-                           'transpose3': 'normal'})
-                         )
+        result = self.run_three_level_problem(trivial=True)
+        num = result[0]
+        self.assertAlmostEqual(num, 3.4)
+        self.assertEqual(result[1],
+                         {'a': 'block',
+                          'add1': 'normal',
+                          'b': 'block',
+                          'c': 'block',
+                          'd': 'block',
+                          'e': 'block',
+                          'f': 'block',
+                          'g': 'block',
+                          'mul0': 'cannon',
+                          'mul2': 'cannon',
+                          'transpose3': 'normal'})
 
     def test_three_solve_implementation_search(self):
         # Verified by hand, but if the cost tables change
         # so might this solution
         result = self.run_three_level_problem()
-        self.assertEqual(result[list(result.keys())[0]],
-                         (4.0,
-                          {'a': 'block',
-                           'add1': 'normal',
-                           'b': 'block',
-                           'c': 'block',
-                           'd': 'block',
-                           'e': 'block',
-                           'f': 'block',
-                           'g': 'block',
-                           'mul0': 'cannon',
-                           'mul2': 'cannon',
-                           'transpose3': 'normal'}))
+        num = result[list(result.keys())[0]][0]
+        self.assertAlmostEqual(num, 3.4)
+        self.assertEqual(result[list(result.keys())[0]][1],
+                         {'a': 'block',
+                          'add1': 'normal',
+                          'b': 'block',
+                          'c': 'block',
+                          'd': 'block',
+                          'e': 'block',
+                          'f': 'block',
+                          'g': 'block',
+                          'mul0': 'cannon',
+                          'mul2': 'cannon',
+                          'transpose3': 'normal'})
 
     def test_three_solve_exhaustive(self):
         result = self.run_three_level_problem(tau=90000)
-        self.assertEqual(result[list(result.keys())[0]],
-                         (4.0,
-                          {'a': 'block',
-                           'add1': 'normal',
-                           'b': 'block',
-                           'c': 'block',
-                           'd': 'block',
-                           'e': 'block',
-                           'f': 'block',
-                           'g': 'block',
-                           'mul0': 'cannon',
-                           'mul2': 'cannon',
-                           'transpose3': 'normal'}))
+        num = result[list(result.keys())[0]][0]
+        self.assertAlmostEqual(num, 3.4)
+        self.assertEqual(result[list(result.keys())[0]][1],
+                         {'a': 'block',
+                          'add1': 'normal',
+                          'b': 'block',
+                          'c': 'block',
+                          'd': 'block',
+                          'e': 'block',
+                          'f': 'block',
+                          'g': 'block',
+                          'mul0': 'cannon',
+                          'mul2': 'cannon',
+                          'transpose3': 'normal'})
 
     def test_three_solve_min_deviance(self):
         # Also hand-verified
         result = self.run_three_level_problem(tau_prime=2)
-        self.assertEqual(result[list(result.keys())[0]],
-                         (9.1,
-                          {'a': 'col',
-                           'add1': 'normal',
-                           'b': 'row',
-                           'c': 'row',
-                           'd': 'row',
-                           'e': 'row',
-                           'f': 'row',
-                           'g': 'col',
-                           'mul0': 'dot_d',
-                           'mul2': 'dot_d',
-                           'transpose3': 'normal'}))
+        num = result[list(result.keys())[0]][0]
+        self.assertAlmostEqual(num, 4.0)
+        self.assertEqual(result[list(result.keys())[0]][1],
+                         {'a': 'row',
+                          'add1': 'normal',
+                          'b': 'row',
+                          'c': 'row',
+                          'd': 'row',
+                          'e': 'row',
+                          'f': 'row',
+                          'g': 'row',
+                          'mul0': 'dot_d',
+                          'mul2': 'dot_d',
+                          'transpose3': 'normal'})
 
     def test_two_comp_trivial(self):
         self.run_two_comp_problem(trivial=True)
@@ -187,7 +194,7 @@ class TestSolver(unittest.TestCase):
         # Solution is 49.0, for 0.006 sec
         self.run_random_problem(seed=101, num_expressions=20,
                                 num_input_vars=4, trivial=True)
-    '''
+
     def test_skinny_program_exhaustive_search(self):
         # Solution is 38.0, six minutes
         self.run_random_problem(seed=101, num_expressions=8,
@@ -199,13 +206,17 @@ class TestSolver(unittest.TestCase):
         self.run_random_problem(seed=101, num_expressions=20,
                                 num_input_vars=4,
                                 tau_prime=80000, b=2, eta=0.1)
-    '''
+
 
     def test_skinny_program_min_deviance(self):
         # Solution is 68.0, 1/5th of second
         self.run_random_problem(seed=101, num_expressions=20,
                                 num_input_vars=4,
                                 tau_prime=2, b=2, eta=0.1)
+    '''
+
+    def test_four_tests_for_Avah(self):
+        run_four_tests(*make_basic_edge_set_add_transpose())
 
 
 if __name__ == '__main__':
