@@ -229,7 +229,7 @@ def generate_random_problem(my_seed, num_expressions=None, num_input_vars=None):
             vertex_sizes[k] += new_sizes[k]
         all_vars += new_var_names
         prev_layer_added = new_var_names
-    return Problem(edge_set, beginning_vertex_sizes, 1), main_inputs
+    return Problem(edge_set, beginning_vertex_sizes, 1, input_vars=vertex_sizes), main_inputs
 
 
 def generate_entire_program(inputs, problem):

@@ -69,7 +69,8 @@ def greedy_solver(problem, tau, tau_prime, b, eta, verbosity, skip_real_exhausti
         vars_solution = [n for n, d in problem.hypergraph.nodes(data=True)
                          if d['bipartite'] == 1]
         edges_solution = [edge_name for edge_name in problem.edges]
-        return exhaust(problem, vars_solution, edges_solution, implementation_space_size*tiling_space_size, verbosity, skip_real_exhaustive=skip_real_exhaustive)
+        a, b = exhaust(problem, vars_solution, edges_solution, implementation_space_size*tiling_space_size, verbosity, skip_real_exhaustive=skip_real_exhaustive)
+        return a-len(problem.input_vars), b
     elif verbosity > 0:
         print("S too big for exhaustive search at: ", implementation_space_size*tiling_space_size, " = ", implementation_space_size, "*", tiling_space_size)
         print("Number of vars: ", len(vars))
@@ -203,7 +204,7 @@ def exhaust(problem, var_names, edge_names, size, verbosity=0, skip_real_exhaust
         print("Total iterations: ", count)
     for point in total_solution:
         point.set_idx_with_val(best_solution[point.name])
-    return best_cost-len(problem.input_vars), best_solution
+    return best_cost, best_solution
 
 
 def greedy_solve_helper(problem, b, eta):
