@@ -10,7 +10,7 @@ class Mul(edge.Edge):
     expression = "{} = {}*{}"
     op_name = "mul"
     _reassignable = False
-    options = ['cannon', 'dot_d']
+    options = ['dot_d']
 
     def __init__(self, program_index, output, inputs):
         super(Mul, self).__init__(program_index, output, inputs)
@@ -55,52 +55,32 @@ class Mul(edge.Edge):
                 (MatrixSize.small_large, MatrixSize.large_small)]
 
     @staticmethod
-    def mul_cannon_cost():
-        # We want to exclude "feasibility" calculations by just
-        # adding high costs to non-feasible input tilings
-        #assert operands[0] == 'block', "Cannon's algorithm requires block tiling"
-        #assert operands[0] == operands[1], "Cannon's algorithm requires block tiling"
-        return np.array([[[10, 15, 10], [15, 15, 20], [15, 5, 3]],
-                         [[15, 10, 10], [20, 30, 10], [15, 10, 2]],
-                         [[15, 3, 6], [24, 24, 30], [12, 6, 0.9]]])
-
-    @staticmethod
     def mul_dot_d_cost():
-        return np.array([[[6, 1, 2], [20, 12, 14], [15, 6, 7]],
-                         [[10, 3, 6], [25, 12, 17], [24, 10, 8]],
-                         [[7, 3, 5], [24, 18, 15], [16, 10, 10]]])
+        return np.array([[[6, 1], [20, 12]],
+                         [[10, 3], [25, 12]]])
 
     @staticmethod
     def get_cost_dict():
-        return {'cannon': Mul.mul_cannon_cost, 'dot_d': Mul.mul_dot_d_cost}
+        return {'dot_d': Mul.mul_dot_d_cost}
 
     @staticmethod
     def num_implementations():
-        return 2
+        return 1
 
     @staticmethod
     def random_imp():
-        return random.choice(["cannon", "dot_d"])
+        return random.choice(["dot_d"])
 
     def expression_weight(self):
-        if self.idx == 0:
-            return 0.7
-        else:
-            return 1.0
+        return 1.0
 
     def get_acceptable_tilings(self):
         r = "row"
         c = "col"
-        b = "block"
-        if self.idx == 0:
-            # Cannon
-            return [[b, b, b]]
-        else:
-            # Dot_d
-            acceptable = [[r, r, r],
-                          [r, r, c],
-                          [r, r, b],
-                          [c, r, c],
-                          [c, c, c],
-                          [c, b, c]]
-            return acceptable
+
+        # Dot_d
+        acceptable = [[r, r, r],
+                      [r, r, c],
+                      [c, r, c],
+                      [c, c, c]]
+        return acceptable

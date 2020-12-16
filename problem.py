@@ -46,12 +46,17 @@ class Problem:
     beginning distributed matrix is spread across
     """
     def __init__(self, edge_set, vertex_sizes, num_locs=1,
-                 initial_distribution=None, hypergraph=None, partial_order=None, edges=None, variables=None):
+                 initial_distribution=None, hypergraph=None, partial_order=None, edges=None, variables=None, input_vars=None):
         self.edgespace = EdgeSpace()
         if initial_distribution is None:
             self.even_dist = True
         else:
             self.even_dist = False
+
+        if input_vars is not None:
+            self.input_vars = input_vars
+        else:
+            self.input_vars = [item for sublist in vertex_sizes for item in sublist]
 
         if hypergraph is not None \
                 and partial_order is not None \
@@ -219,6 +224,7 @@ class Problem:
 
             #cost = cost_matrix[tuple(loc.T)]+mod_cost
             prod = [a*b for a, b in zip(matrix_weights, float_change_mask)]
+
             cost = edge_weight + sum(prod)
             tmp_sum += edge.loop_weight*cost
         return tmp_sum

@@ -14,8 +14,10 @@ def get_sub_problem(prob, sub_hypergraph, sub_graph):
     edges = {edge.name: edge for edge in prob.edges.values() if edge.name in sub_graph.nodes}
     vert = {var.name: var for var in prob.variables.values() if var.name in vars}
 
+    input_vars = [x for x in prob.input_vars if x in vars]
+
     sub_problem = Problem([], [], 1, edges=edges, variables=vert,
-                          hypergraph=sub_hypergraph, partial_order=sub_graph)
+                          hypergraph=sub_hypergraph, partial_order=sub_graph, input_vars=input_vars)
     return sub_problem
 
 
@@ -27,7 +29,7 @@ def local_solve(prob: Problem):
     algorithm_choices = list(prob.edges.values())
     total_solution = vars_solution + algorithm_choices
     solution_map = {point.name: point.get_option() for point in total_solution}
-    return cost, solution_map
+    return cost-len(prob.input_vars), solution_map
 
 
 def greedy_solve(prob: Problem, tau=10, tau_prime=20, b=2, eta=0.1, verbosity=0, skip_real_exhaustive=False):
@@ -37,11 +39,11 @@ def greedy_solve(prob: Problem, tau=10, tau_prime=20, b=2, eta=0.1, verbosity=0,
     comp = [list(component) for component in comps]
     component_names = ["component_"+str(i) for i in range(len(comp))]
     results = {component_name: -1 for component_name in component_names}
-    print(graph.nodes, graph.edges)
+    #print(graph.nodes, graph.edges)
     if verbosity > 0:
         print("Num. of Components: ", len(comp))
     for i in range(len(comp)):
-        print(i)
+        #print(i)
         component = comp[i]
         sub_graph = prob.partial_order.subgraph(list(set(component) | {'_begin_'})).copy()
         sub_hypergraph = prob.hypergraph.subgraph(prob.ground_set | set(component)).copy()
@@ -96,7 +98,7 @@ def greedy_solver(problem, tau, tau_prime, b, eta, verbosity, skip_real_exhausti
             count += 1
         if verbosity > 0:
             print("Best cost: ", best_cost)
-        return best_cost, best_solution
+        return best_cost-len(problem.input_vars), best_solution
     else:
         if verbosity > 0:
             print("Minimum cost deviation method")
@@ -108,7 +110,7 @@ def greedy_solver(problem, tau, tau_prime, b, eta, verbosity, skip_real_exhausti
         algorithm_choices = [problem.edges[edge_name] for edge_name in problem.edges]
         total_solution = vars_solution + algorithm_choices
         solution_map = {point.name: point.get_option() for point in total_solution}
-        return problem.calculate_cost(), solution_map
+        return problem.calculate_cost()-len(problem.input_vars), solution_map
 
 
 def find_local_solution(problem):
@@ -143,6 +145,7 @@ def find_local_solution(problem):
                 if tmp_cost < min_cost:
                     min_cost = tmp_cost
                     min_loc = np.unravel_index(cost_table.argmin(), cost_table.shape)
+                    #print(min_loc, cost_table, edge_name, edge.name, edge.idx)
                     edge.set_idx_with_val(alg)
                     count = 0
                     for i in range(len(choices)):
@@ -200,7 +203,7 @@ def exhaust(problem, var_names, edge_names, size, verbosity=0, skip_real_exhaust
         print("Total iterations: ", count)
     for point in total_solution:
         point.set_idx_with_val(best_solution[point.name])
-    return best_cost, best_solution
+    return best_cost-len(problem.input_vars), best_solution
 
 
 def greedy_solve_helper(problem, b, eta):

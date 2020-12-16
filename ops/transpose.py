@@ -39,7 +39,7 @@ class Transpose(edge.Edge):
 
     @staticmethod
     def normal_cost():
-        return np.array([[5, 1, 2], [1.1, 5, 2], [3, 3, 1.1]])
+        return np.array([[5, 1], [1.1, 5]])
 
     @staticmethod
     def get_cost_dict():
@@ -59,8 +59,6 @@ class Transpose(edge.Edge):
     def get_acceptable_tilings(self):
         r = "row"
         c = "col"
-        b = "block"
         acceptable = [[r, r],
-                      [c, c],
-                      [b, b]]
+                      [c, c]]
         return acceptable

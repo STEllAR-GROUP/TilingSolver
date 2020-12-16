@@ -5,7 +5,7 @@ class Nextable:
 
     def __init__(self, name):
         self.name = name
-        self.idx = 0
+        self._idx = 0
 
     def next(self, nodes, my_idx=0, presence=None):
         if presence is None:
@@ -26,10 +26,21 @@ class Nextable:
             return False
         return False
 
-    def get_idx(self):
-        return self.idx
+    @property
+    def idx(self):
+        return self._idx
+
+    @idx.setter
+    def idx(self, val):
+        if val in range(len(self.options)):
+            self._idx = val
+        elif val in self.options:
+                self._idx = self.options.index(val)
+        else:
+            raise ValueError("Setting idx failed: {0}".format(val))
 
     def get_option(self):
+        #print(self.idx, self.name)
         return self.options[self.idx]
 
     def set_idx_with_val(self, val):

@@ -47,7 +47,7 @@ class TestSolver(unittest.TestCase):
         print(generate_entire_program(inputs, problem))
         return result
 
-    '''
+
     
     def test_trivial_solve(self):
         self.assertEqual(self.run_basic_problem(trivial=True),
@@ -213,7 +213,7 @@ class TestSolver(unittest.TestCase):
         self.run_random_problem(seed=101, num_expressions=20,
                                 num_input_vars=4,
                                 tau_prime=2, b=2, eta=0.1)
-    '''
+
 
     def test_four_tests_for_Avah(self):
         run_four_tests(*make_basic_edge_set_add_transpose())

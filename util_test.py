@@ -23,7 +23,7 @@ def make_basic_edge_set():
     return edge_set, vertex_sizes
 
 
-def make_basic_edge_set_add_transpose():
+'''
     edge_set = {Add(0, 'f', ['a', 'bT']),
                 Add(1, 'f', ['f', 'a']),
                 Mul(2, 'g', ['b', 'c']),
@@ -31,6 +31,18 @@ def make_basic_edge_set_add_transpose():
                 Mul(4, 'i', ['d', 'c'])}
     # [s_s, s_l, l_s, l_l]
     vertex_sizes = [['d'], ['a', 'c'], ['b'], ['e']]
+'''
+def make_basic_edge_set_add_transpose():
+    edge_set = {Add(0, 'f', ['a', 'bT']),
+                Add(1, 'f', ['f', 'a']),
+                Mul(2, 'g', ['b', 'c']),
+                Add(3, 'h', ['e', 'gT']),
+                Mul(4, 'i', ['d', 'c']),
+                Inv(5, 'j', ['d']),
+                Transpose(6, 'k', ['j']),
+                Add(7, 'l', ['aT', 'k'])}
+    # [s_s, s_l, l_s, l_l]
+    vertex_sizes = [[], [], [], ['a', 'b', 'c', 'd', 'e']]
     return edge_set, vertex_sizes
 
 def make_three_level_edge_set():
@@ -60,7 +72,6 @@ def make_multi_component_edge_set():
 def run_four_tests(edge_set, vertex_sizes, verbosity=0, prob=None, skip_real_exhaustive=False):
     if prob is None:
         prob = Problem(edge_set, vertex_sizes)
-
     start = time.perf_counter()
     cost, result = local_solve(prob)
     stop = time.perf_counter()
@@ -68,7 +79,6 @@ def run_four_tests(edge_set, vertex_sizes, verbosity=0, prob=None, skip_real_exh
     print("    Local solve results: ", cost, result)
     print(f"    Time for completion: {stop-start:0.4f}")
     print("----------------------------------------")
-
     implementation_space_size = 1
     for edge in prob.edges:
         implementation_space_size *= prob.edges[edge].num_implementations()
@@ -77,6 +87,7 @@ def run_four_tests(edge_set, vertex_sizes, verbosity=0, prob=None, skip_real_exh
     # Start with a fresh problem
     prob.reset_indices()
     start = time.perf_counter()
+
     results = greedy_solve(prob, tau, verbosity=verbosity, skip_real_exhaustive=skip_real_exhaustive)
     stop = time.perf_counter()
     print("2.")
@@ -97,7 +108,7 @@ def run_four_tests(edge_set, vertex_sizes, verbosity=0, prob=None, skip_real_exh
     # Start with a fresh problem
     prob.reset_indices()
     start = time.perf_counter()
-    results = greedy_solve(prob, tau=2, tau_prime=2, verbosity=verbosity)
+    #results = greedy_solve(prob, tau=2, tau_prime=2, verbosity=verbosity)
     stop = time.perf_counter()
     print("4.")
     print("    Min deviance search result: ", results)

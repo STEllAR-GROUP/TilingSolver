@@ -26,8 +26,8 @@ class TestRandomPrograms(unittest.TestCase):
 
     def test_problem_supplied_size_four_tests(self):
         self.MY_SEED = 101
-        num_expressions = 80
-        num_input_vars = 30
+        num_expressions = 11
+        num_input_vars = 4
         problem, inputs = generate_random_problem(self.MY_SEED, num_expressions, num_input_vars)
 
         print(problem.edges)

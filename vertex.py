@@ -23,7 +23,7 @@ class Vertex(Nextable):
     # Since we're gonna start using these for tracking available tiling configs
     # in the expressions, these should really be an Enum. But I don't currently
     # have time for that. Je to škoda
-    options = ['row', 'col', 'block']
+    options = ['row', 'col']
 
     def __init__(self, var_name, size, generation, tiling_type, dist):
         super(Vertex, self).__init__(var_name)
@@ -38,7 +38,7 @@ class Vertex(Nextable):
         self.generation = generation
         assert tiling_type in self.options
         self.dist = dist
-        self.idx = self.options.index(self.tiling_type)
+        self._idx = self.options.index(self.tiling_type)
         self.start_idx = self.idx
 
     def next(self, nodes, my_idx=0, presence=None):
@@ -67,7 +67,7 @@ class Vertex(Nextable):
         elif self.idx == 1:
             return 0
         else:
-            return 2
+            raise ValueError("self.idx out of bounds")
 
     @property
     def tiling_type(self):
@@ -80,7 +80,6 @@ class Vertex(Nextable):
         elif self.size == MatrixSize.small_large:
             return MatrixSize.small_large
         return self.size
-
 
     def __str__(self):
         return self.name + " " + self.options[self.idx] + " " + str(self.idx)
