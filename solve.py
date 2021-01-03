@@ -116,6 +116,7 @@ def greedy_solver(problem, tau, tau_prime, b, eta, verbosity, skip_real_exhausti
 
 def find_local_solution(problem):
     assigned = {var_name: False for var_name in problem.variables}
+    retile_cost = 0.0
     for level_set in detail.get_level_sets(problem.partial_order)[1:]:
         level_set_sortable = [(problem.edges[edge_name].program_index, edge_name) for edge_name in level_set]
         level_set_sortable.sort()
@@ -127,6 +128,7 @@ def find_local_solution(problem):
             local_vars = [problem.variables[var_name] for var_name in edge.vars]
             for alg in edge.options:
                 cost_table = cost_dict[alg]()
+                #print(cost_table)
                 # There is no real protection here from reassigning
                 # variable's tiling, outside of that variable's name
                 # being present in assigned, we might want to add some
@@ -146,12 +148,16 @@ def find_local_solution(problem):
                 if tmp_cost < min_cost:
                     min_cost = tmp_cost
                     min_loc = np.unravel_index(cost_table.argmin(), cost_table.shape)
-                    #print(min_loc, cost_table, edge_name, edge.name, edge.idx)
                     edge.set_idx_with_val(alg)
                     count = 0
                     for i in range(len(choices)):
                         if choices[i] is None:
-                            local_vars[i].idx = min_loc[count]
+                            var_stripped_idx = edge.vars.index(local_vars[i].name)
+                            var_non_stripped_name = edge._vars[var_stripped_idx]
+                            if var_non_stripped_name[-1] == 'T':
+                                local_vars[i].idx = (min_loc[count]+1) % 2
+                            else:
+                                local_vars[i].idx = min_loc[count]
                             count += 1
             for var_name in edge.vars:
                 assigned[var_name] = True

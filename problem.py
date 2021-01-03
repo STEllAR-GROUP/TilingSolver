@@ -213,8 +213,7 @@ class Problem:
             # so that we can allow them to be the transposed version of that variable
             #loc = np.array([self.variables[name].idx for name in edge.vars])
             loc, sizes, mod_cost = edge.get_var_info(self.variables)
-
-            tiling_map = {0: "row", 1: "col", 2: "block"}
+            tiling_map = {0: "row", 1: "col"}
             tilings = [tiling_map[l] for l in loc]
 
             change_mask = edge.find_closest_tiling(tilings, edge.get_acceptable_tilings())
@@ -224,7 +223,6 @@ class Problem:
 
             #cost = cost_matrix[tuple(loc.T)]+mod_cost
             prod = [a*b for a, b in zip(matrix_weights, float_change_mask)]
-
             cost = edge_weight + sum(prod)
             tmp_sum += edge.loop_weight*cost
         return tmp_sum
@@ -247,4 +245,4 @@ class Problem:
         return self.variables[var_name].dist
 
     def get_tiling_tuples(self, size):
-        return sorted(list(set(permutations(['row', 'row', 'col', 'col', 'block', 'block'], size))))
+        return sorted(list(set(permutations(['row', 'row', 'col', 'col'], size))))

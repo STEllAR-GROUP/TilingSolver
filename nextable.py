@@ -35,7 +35,7 @@ class Nextable:
         if val in range(len(self.options)):
             self._idx = val
         elif val in self.options:
-                self._idx = self.options.index(val)
+            self._idx = self.options.index(val)
         else:
             raise ValueError("Setting idx failed: {0}".format(val))
 
