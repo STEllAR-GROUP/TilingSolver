@@ -1,3 +1,4 @@
+import copy
 import detail
 import networkx as nx
 import numpy as np
@@ -5,6 +6,10 @@ import sys
 import time
 
 from problem import Problem
+
+from math import log, floor
+from multiprocessing import cpu_count
+from joblib import Parallel, delayed
 
 
 def get_sub_problem(prob, sub_hypergraph, sub_graph):
@@ -169,46 +174,56 @@ def exhaust(problem, var_names, edge_names, size, verbosity=0, skip_real_exhaust
     vars_solution = [problem.variables[var_name] for var_name in var_names]
     edges_solution = [problem.edges[edge_name] for edge_name in edge_names]
     total_solution = vars_solution+edges_solution
-    solution_map = {point.name: point.get_option() for point in total_solution}
-    finished = len(total_solution) == 0
-    best_solution = solution_map.copy()
-    best_cost = problem.calculate_cost()
-    count = 1
-    # This could be parallelized by
-    # farming different algorithmic sets out to
-    # individual threads. Would require copying the problem
-    # to avoid race conditions though
-    start = time.perf_counter()
-    factor = 1000000000000000000000000
-    bound = int(size/factor)
-    bound_count = 0
-    total_time = 0.0
+
     if skip_real_exhaustive:
         print("Size of space: ", size)
-    while not finished:
-        if verbosity > 0 and bound > 0 and count % bound == 0:
-            stop = time.perf_counter()
-            total_time = total_time + (stop - start)
-            if bound_count > 0:
-                time_remaining = (factor-bound_count)*(total_time/bound_count)
-            else:
-                time_remaining = -1.0 #"Unknown"
-            #print(type(total_time), type(time_remaining))
-            print(f"{str(bound_count*(100.0/factor))}% - Time remaining: {str(time_remaining)} - Total projected time: {str(time_remaining+total_time)}")
-            start = time.perf_counter()
-            bound_count += 1
-            if skip_real_exhaustive and bound_count > 3:
-                break
-        finished = total_solution[0].next(total_solution)
-        tmp_cost = problem.calculate_cost()
-        if tmp_cost < best_cost:
-            best_cost = tmp_cost
-            best_solution = {point.name: point.get_option() for point in total_solution}
-            if verbosity > 1:
-                print("Exhaust Reassignment: ", count, best_cost, best_solution)
-        count += 1
-    if verbosity > 1:
-        print("Total iterations: ", count)
+
+    num_cpus = cpu_count()
+    num_cpus_used = floor(log(num_cpus, 2))
+
+    # In case we have more cpus than iterations
+    if num_cpus_used > size:
+        num_cpus_used = floor(log(size, 2))
+
+    problem_copies = []
+    for i in range(num_cpus_used):
+        problem_copies.append(copy.deepcopy(problem))
+
+    def run_sub_exhaust(problem2, iter_idx):
+        vars_solution2 = [problem2.variables[var_name] for var_name in var_names]
+        edges_solution2 = [problem2.edges[edge_name] for edge_name in edge_names]
+        total_solution2 = vars_solution2 + edges_solution2
+
+        solution_map2 = {point.name: point.get_option() for point in total_solution}
+        best_solution2 = solution_map2.copy()
+        best_cost2 = problem.calculate_cost()
+
+        # There shouldn't be any risk of truncation here
+        # because of the floor used to calculate num_cpus_used
+        num_vars_needed = int(log(num_cpus_used, 2))
+        for idx in range(iter_idx):
+            total_solution2[0].next(total_solution2[:num_vars_needed])
+
+        finished = len(total_solution2) == 0
+        while not finished:
+            finished = total_solution2[num_vars_needed].next(total_solution2[num_vars_needed:])
+            tmp_cost = problem.calculate_cost()
+            if tmp_cost < best_cost2:
+                best_cost2 = tmp_cost
+                best_solution2 = {point.name: point.get_option() for point in total_solution2}
+        return best_cost2, best_solution2
+
+    pairs = Parallel(n_jobs=2)(delayed(run_sub_exhaust)(problem_copies[i], i) for i in range(len(problem_copies)))
+
+    solution_map = {point.name: point.get_option() for point in total_solution}
+    best_solution = solution_map.copy()
+    best_cost = problem.calculate_cost()
+
+    for i in range(len(pairs)):
+        if pairs[i][0] < best_cost:
+            best_cost = pairs[i][0]
+            best_solution = pairs[i][1]
+
     for point in total_solution:
         point.set_idx_with_val(best_solution[point.name])
     return best_cost, best_solution
