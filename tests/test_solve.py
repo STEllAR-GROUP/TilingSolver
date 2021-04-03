@@ -210,8 +210,8 @@ class TestSolver(unittest.TestCase):
 
     def test_skinny_program_min_deviance(self):
         # Solution is 68.0, 1/5th of second
-        self.run_random_problem(seed=101, num_expressions=20,
-                                num_input_vars=4,
+        self.run_random_problem(seed=103, num_expressions=11,
+                                num_input_vars=10,
                                 tau_prime=2, b=2, eta=0.1)
 
 

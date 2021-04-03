@@ -33,8 +33,8 @@ def make_basic_edge_set():
     vertex_sizes = [['d'], ['a', 'c'], ['b'], ['e']]
 '''
 def make_basic_edge_set_add_transpose():
-    edge_set = {Add(0, 'f', ['a', 'bT']),
-                Add(1, 'f', ['f', 'a']),
+    edge_set = {Add(0, 'd', ['a', 'bT']),
+                Add(1, 'e', ['cT', 'a']),
                 Mul(2, 'g', ['b', 'c']),
                 Add(3, 'h', ['e', 'gT']),
                 Mul(4, 'i', ['d', 'c']),
@@ -42,7 +42,7 @@ def make_basic_edge_set_add_transpose():
                 Transpose(6, 'k', ['j']),
                 Add(7, 'l', ['aT', 'k'])}
     # [s_s, s_l, l_s, l_l]
-    vertex_sizes = [[], [], [], ['a', 'b', 'c', 'd', 'e']]
+    vertex_sizes = [[], [], [], ['a', 'b', 'c']]
     return edge_set, vertex_sizes
 
 def make_three_level_edge_set():
@@ -229,6 +229,7 @@ def generate_random_problem(my_seed, num_expressions=None, num_input_vars=None):
             vertex_sizes[k] += new_sizes[k]
         all_vars += new_var_names
         prev_layer_added = new_var_names
+    print(edge_set, beginning_vertex_sizes)
     return Problem(edge_set, beginning_vertex_sizes, 1, input_vars=vertex_sizes), main_inputs
 
 

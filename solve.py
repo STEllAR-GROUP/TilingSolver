@@ -125,6 +125,7 @@ def find_local_solution(problem):
             cost_dict = edge.get_cost_dict()
             # Basically MAX_INT
             min_cost = sys.maxsize
+            print(edge)
             local_vars = [problem.variables[var_name] for var_name in edge.vars]
             for alg in edge.options:
                 cost_table = cost_dict[alg]()

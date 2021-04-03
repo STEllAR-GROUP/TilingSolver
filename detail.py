@@ -11,6 +11,8 @@ class EdgeSpace:
         #print(os.getcwd())
         if os.getcwd()[-5:] == "tests":
             filenames = next(os.walk('../ops'))[2]
+        elif os.getcwd()[-3:] == "exp":
+            filenames = next(os.walk('../ops'))[2]
         else:
             filenames = next(os.walk('ops'))[2]
         for name in filenames:
