@@ -37,7 +37,7 @@ class Edge(Nextable):
         self.loop_weight = loop_weight
         if self.output in self.inputs:
             self.inplace = True
-        self._vars = [self.output]+self.inputs
+        self._vars = [self.output]+self._inputs
         self.check_arity()
 
     def get_arity(self):
@@ -55,7 +55,7 @@ class Edge(Nextable):
         return self._inputs
 
     def __repr__(self):
-        return self.expression.format(self.output, *self.inputs)+str(self.idx)
+        return self.expression.format(self.output, *self.inputs)
 
     def __str__(self):
         return self.expression.format(self.output, *self.inputs)

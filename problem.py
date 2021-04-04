@@ -46,12 +46,17 @@ class Problem:
     beginning distributed matrix is spread across
     """
     def __init__(self, edge_set, vertex_sizes, num_locs=1,
-                 initial_distribution=None, hypergraph=None, partial_order=None, edges=None, variables=None):
+                 initial_distribution=None, hypergraph=None, partial_order=None, edges=None, variables=None, input_vars=None):
         self.edgespace = EdgeSpace()
         if initial_distribution is None:
             self.even_dist = True
         else:
             self.even_dist = False
+
+        if input_vars is not None:
+            self.input_vars = input_vars
+        else:
+            self.input_vars = [item for sublist in vertex_sizes for item in sublist]
 
         if hypergraph is not None \
                 and partial_order is not None \
@@ -74,6 +79,7 @@ class Problem:
         # edge set
         self.ground_set = {n for n, d in self.hypergraph.nodes(data=True)
                            if d['bipartite'] == 1}
+        print(sorted(self.ground_set), vertex_sizes)
         assert self.ground_set == (self.ground_set | set(vertex_sizes[0] +
                                                          vertex_sizes[1] +
                                                          vertex_sizes[2] +
@@ -208,8 +214,7 @@ class Problem:
             # so that we can allow them to be the transposed version of that variable
             #loc = np.array([self.variables[name].idx for name in edge.vars])
             loc, sizes, mod_cost = edge.get_var_info(self.variables)
-
-            tiling_map = {0: "row", 1: "col", 2: "block"}
+            tiling_map = {0: "row", 1: "col"}
             tilings = [tiling_map[l] for l in loc]
 
             change_mask = edge.find_closest_tiling(tilings, edge.get_acceptable_tilings())
@@ -241,4 +246,4 @@ class Problem:
         return self.variables[var_name].dist
 
     def get_tiling_tuples(self, size):
-        return sorted(list(set(permutations(['row', 'row', 'col', 'col', 'block', 'block'], size))))
+        return sorted(list(set(permutations(['row', 'row', 'col', 'col'], size))))

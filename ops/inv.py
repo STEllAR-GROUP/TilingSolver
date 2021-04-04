@@ -31,7 +31,7 @@ class Inv(edge.Edge):
 
     @staticmethod
     def normal_cost():
-        return np.array([[1, 10, 2], [6, 10, 4], [2, 3, 1.1]])
+        return np.array([[1, 10], [6, 10]])
 
     @staticmethod
     def get_cost_dict():
@@ -51,9 +51,7 @@ class Inv(edge.Edge):
     def get_acceptable_tilings(self):
         r = "row"
         c = "col"
-        b = "block"
         acceptable = [[r, r],
-                      [c, c],
-                      [b, b]]
+                      [c, c]]
         return acceptable
 
